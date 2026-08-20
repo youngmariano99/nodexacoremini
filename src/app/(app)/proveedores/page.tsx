@@ -15,7 +15,8 @@ export default async function ProveedoresPage() {
     redirect("/login");
   }
 
-  const { data: proveedores = [] } = await obtenerProveedores(supabase);
+  const proveedoresRes = await obtenerProveedores(supabase);
+  const proveedores = proveedoresRes.ok ? proveedoresRes.data : [];
 
   return (
     <div className="min-h-screen bg-background">

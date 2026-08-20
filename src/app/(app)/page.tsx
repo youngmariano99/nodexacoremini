@@ -19,8 +19,8 @@ export default async function DashboardPage() {
   }
 
   // Validar si completó el onboarding profile
-  const { data: onboardingListo } = await verificarPerfilOnboardingCompletado(supabase, user.id);
-  if (!onboardingListo) {
+  const onboardingRes = await verificarPerfilOnboardingCompletado(supabase, user.id);
+  if (!onboardingRes.ok || !onboardingRes.data) {
     redirect("/onboarding");
   }
 
