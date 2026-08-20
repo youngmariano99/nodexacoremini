@@ -1,0 +1,33 @@
+# Dependencias instaladas
+node_modules/
+
+# Archivos de build y compilación
+.next/
+out/
+build/
+tsconfig.tsbuildinfo
+
+# Variables de entorno locales (CONTIENEN CREDENCIALES - NUNCA SUBIR)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs del sistema
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Reportes y temporales de testing
+coverage/
+playwright-report/
+test-results/
+
+# Carpetas de Vercel/despliegue local
+.vercel

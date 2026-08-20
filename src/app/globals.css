@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+:root {
+  /* Fondo técnico sobrio */
+  --background: #090B0B;
+  --foreground: #F2F4F4;
+  
+  /* Superficies elevadas */
+  --surface: #111615;
+  --surface-hover: #171E1D;
+  --border: #1E2826;
+  
+  /* Colores de acento e indicadores de estado */
+  --brand-active: #16D39A;       /* Verde Éxito / Acción */
+  --state-alert: #EAB308;        /* Amarillo Alerta (Punto de Pedido) */
+  --state-critical: #EF4444;     /* Rojo Crítico / Error */
+  
+  /* Tipografía JetBrains Mono para números */
+  --font-mono: "JetBrains Mono", monospace;
+  --font-sans: "Inter", sans-serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-brand: var(--brand-active);
+  --color-alert: var(--state-alert);
+  --color-critical: var(--state-critical);
+  --font-mono: var(--font-mono);
+  --font-sans: var(--font-sans);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Números y métricas financieras/operativas */
+.numbers-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Estilos de inputs oscuros y limpios */
+input, select, textarea {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  border-radius: 6px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--brand-active);
+}
