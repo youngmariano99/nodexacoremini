@@ -15,13 +15,14 @@ export default async function OnboardingPage() {
   }
 
   // Verificar si ya completó el perfil
-  const { data: yaCompletado } = await verificarPerfilOnboardingCompletado(supabase, user.id);
-  if (yaCompletado) {
+  const yaCompletadoRes = await verificarPerfilOnboardingCompletado(supabase, user.id);
+  if (yaCompletadoRes.ok && yaCompletadoRes.data) {
     redirect("/");
   }
 
   // Obtener opciones para la pregunta clave de onboarding
-  const { data: opciones = [] } = await obtenerOpcionesOnboarding(supabase);
+  const opcionesRes = await obtenerOpcionesOnboarding(supabase);
+  const opciones = opcionesRes.ok ? opcionesRes.data : [];
 
   return (
     <div className="min-h-screen bg-background flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
