@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { crearClienteSupabaseServidor } from "@/lib/supabase/server";
+import { crearClienteSupabaseServidor, crearClienteSupabaseAdmin } from "@/lib/supabase/server";
 
 // Lista de administradores permitidos (se puede expandir vía .env)
 function esAdministrador(email?: string): boolean {
@@ -13,14 +13,15 @@ function esAdministrador(email?: string): boolean {
 }
 
 async function verificarAdmin() {
-  const supabase = await crearClienteSupabaseServidor();
-  const { data: { user } } = await supabase.auth.getUser();
+  const userClient = await crearClienteSupabaseServidor();
+  const { data: { user } } = await userClient.auth.getUser();
 
   if (!user || !esAdministrador(user.email)) {
     throw new Error("No autorizado: Acceso exclusivo para administradores");
   }
 
-  return { supabase, user };
+  const adminClient = crearClienteSupabaseAdmin();
+  return { supabase: adminClient, user };
 }
 
 // 1. SEMBRAR DATOS DE SIMULACIÓN (Listo para TikTok / Reels)
@@ -239,6 +240,41 @@ export async function toggleOpcionOnboardingAction(id: string, activo: boolean) 
 
     revalidatePath("/admin");
     return { ok: true, data: undefined };
+  } catch (error: any) {
+    return { ok: false, error: error.message };
+  }
+}
+
+export async function actualizarOpcionOnboardingAction(id: string, texto: string) {
+  try {
+    const { supabase } = await verificarAdmin();
+    const { error } = await supabase
+      .from("problemas_onboarding_opciones")
+      .update({ texto })
+      .eq("id", id);
+
+    if (error) throw error;
+
+    revalidatePath("/admin");
+    return { ok: true, data: undefined };
+  } catch (error: any) {
+    return { ok: false, error: error.message };
+  }
+}
+
+export async function actualizarWhatsAppAdminAction(whatsapp: string) {
+  try {
+    const { supabase, user } = await verificarAdmin();
+    const { error } = await supabase
+      .from("perfiles_onboarding")
+      .update({ whatsapp })
+      .eq("id", user.id);
+
+    if (error) throw error;
+
+    revalidatePath("/admin");
+    revalidatePath("/");
+    return { ok: true, data: "WhatsApp de soporte actualizado correctamente" };
   } catch (error: any) {
     return { ok: false, error: error.message };
   }

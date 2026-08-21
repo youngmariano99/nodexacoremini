@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Play, RotateCcw, ShieldCheck, Plus, Check, EyeOff, Eye, Loader2, MessageSquarePlus, Phone, User, Store, AlertTriangle } from "lucide-react";
+import { Play, RotateCcw, ShieldCheck, Plus, Check, EyeOff, Eye, Loader2, MessageSquarePlus, Phone, User, Store, AlertTriangle, Edit2, X, Save } from "lucide-react";
 import { OpcionOnboarding } from "@/repositories/onboardingRepository";
 import { MetricasPruebaSocial, MetricaDolor, PowerUser } from "@/repositories/metricasRepository";
 import { 
@@ -9,14 +9,17 @@ import {
   resetearDatosAction, 
   simularQuiebreEvitadoAction, 
   crearOpcionOnboardingAction, 
-  toggleOpcionOnboardingAction 
+  toggleOpcionOnboardingAction,
+  actualizarOpcionOnboardingAction,
+  actualizarWhatsAppAdminAction
 } from "./adminActions";
 
 interface AdminPanelClientProps {
-  opcionesOnboarding: OpcionOnboarding[];
+  opcionesOnboarding: (OpcionOnboarding & { activo: boolean })[];
   metricasSociales: MetricasPruebaSocial;
   mapaDolores: MetricaDolor[];
   powerUsers: PowerUser[];
+  adminWhatsApp: string;
 }
 
 export default function AdminPanelClient({
@@ -24,10 +27,19 @@ export default function AdminPanelClient({
   metricasSociales,
   mapaDolores,
   powerUsers,
+  adminWhatsApp,
 }: AdminPanelClientProps) {
   const [nuevaOpcion, setNuevaOpcion] = useState("");
   const [cargandoAccion, setCargandoAccion] = useState<string | null>(null);
   const [resultadoMsg, setResultadoMsg] = useState<{ texto: string; error?: boolean } | null>(null);
+
+  // Estados para la edición de opciones
+  const [editandoOpcId, setEditandoOpcId] = useState<string | null>(null);
+  const [editandoOpcTexto, setEditandoOpcTexto] = useState("");
+
+  // Estado para WhatsApp
+  const [supportWhatsApp, setSupportWhatsApp] = useState(adminWhatsApp);
+  const [guardandoWhatsApp, setGuardandoWhatsApp] = useState(false);
 
   const handleSimulacion = async (key: string, fn: () => Promise<any>) => {
     setCargandoAccion(key);
@@ -62,6 +74,32 @@ export default function AdminPanelClient({
       setResultadoMsg({ texto: res.error, error: true });
     }
     setCargandoAccion(null);
+  };
+
+  const handleGuardarOpcionEditada = async (id: string) => {
+    if (!editandoOpcTexto.trim()) return;
+    setCargandoAccion(`edit_${id}`);
+    const res = await actualizarOpcionOnboardingAction(id, editandoOpcTexto);
+    if (res.ok) {
+      setEditandoOpcId(null);
+      setResultadoMsg({ texto: "Texto de la opción actualizado correctamente" });
+    } else {
+      setResultadoMsg({ texto: res.error, error: true });
+    }
+    setCargandoAccion(null);
+  };
+
+  const handleGuardarWhatsApp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGuardandoWhatsApp(true);
+    setResultadoMsg(null);
+    const res = await actualizarWhatsAppAdminAction(supportWhatsApp);
+    if (res.ok) {
+      setResultadoMsg({ texto: res.data || "WhatsApp de soporte actualizado" });
+    } else {
+      setResultadoMsg({ texto: res.error || "Error al actualizar", error: true });
+    }
+    setGuardandoWhatsApp(false);
   };
 
   return (
@@ -297,26 +335,66 @@ export default function AdminPanelClient({
                 ) : (
                   opcionesOnboarding.map((opc) => {
                     const cargandoToggle = cargandoAccion === `toggle_${opc.id}`;
-                    // En onboardingRepository.ts, las opciones son activas por definición (eq activo true)
-                    // Para simplificar, asumimos que están activas, pero el admin las puede desactivar/ocultar.
-                    const activo = true; 
+                    const cargandoEdit = cargandoAccion === `edit_${opc.id}`;
+                    const esEditando = editandoOpcId === opc.id;
 
                     return (
-                      <tr key={opc.id} className="hover:bg-surface-hover/30 transition-all">
-                        <td className="py-3 text-foreground">{opc.texto}</td>
+                      <tr key={opc.id} className="hover:bg-surface-hover/30 transition-all text-sm">
+                        <td className="py-3 text-foreground">
+                          {esEditando ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={editandoOpcTexto}
+                                onChange={(e) => setEditandoOpcTexto(e.target.value)}
+                                className="bg-background text-sm py-1.5 px-3 rounded border border-border flex-1 focus:border-brand outline-none"
+                              />
+                              <button
+                                onClick={() => handleGuardarOpcionEditada(opc.id)}
+                                disabled={cargandoEdit || !editandoOpcTexto.trim()}
+                                className="p-1.5 text-brand hover:bg-brand/10 rounded transition-all"
+                                title="Guardar"
+                              >
+                                {cargandoEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                              </button>
+                              <button
+                                onClick={() => setEditandoOpcId(null)}
+                                disabled={cargandoEdit}
+                                className="p-1.5 text-foreground/40 hover:bg-surface-hover rounded transition-all"
+                                title="Cancelar"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between group pr-4">
+                              <span>{opc.texto}</span>
+                              <button
+                                onClick={() => {
+                                  setEditandoOpcId(opc.id);
+                                  setEditandoOpcTexto(opc.texto);
+                                }}
+                                className="p-1 text-foreground/40 hover:text-brand rounded opacity-0 group-hover:opacity-100 transition-all"
+                                title="Editar texto"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
                         <td className="py-3 text-right">
                           <button
-                            onClick={() => handleToggleOpcion(opc.id, activo)}
+                            onClick={() => handleToggleOpcion(opc.id, opc.activo)}
                             disabled={cargandoToggle}
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold border transition-all ${
-                              activo 
+                              opc.activo 
                                 ? "bg-brand/10 border-brand/30 text-brand" 
                                 : "bg-border/30 border-border text-foreground/40"
                             }`}
                           >
                             {cargandoToggle ? (
                               <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : activo ? (
+                            ) : opc.activo ? (
                               <>
                                 <Eye className="w-3.5 h-3.5" />
                                 <span>Activo (Visible)</span>
@@ -337,6 +415,48 @@ export default function AdminPanelClient({
             </table>
           </div>
         </div>
+      </section>
+
+      {/* 4. CONFIGURACIÓN DE WHATSAPP DEL ADMINISTRADOR */}
+      <section className="bg-surface border border-border rounded-xl p-6 space-y-4">
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <Phone className="w-5 h-5 text-brand" />
+            Configuración de WhatsApp de Soporte / Venta
+          </h3>
+          <p className="text-xs text-foreground/50">
+            Definí el número de WhatsApp al cual redirigir a los usuarios del plan gratuito cuando hagan clic en el botón &quot;[Probar Nodexa Core Gratis]&quot;.
+          </p>
+        </div>
+
+        <form onSubmit={handleGuardarWhatsApp} className="max-w-md space-y-3 pt-2">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Ej: 5491122334455 (código de país sin símbolos)"
+              value={supportWhatsApp}
+              onChange={(e) => setSupportWhatsApp(e.target.value)}
+              className="bg-background text-sm py-2 px-3 rounded-lg border border-border flex-1 font-mono text-foreground outline-none focus:border-brand"
+            />
+            <button
+              type="submit"
+              disabled={guardandoWhatsApp}
+              className="px-4 py-2 bg-brand text-background hover:bg-brand/90 font-semibold rounded-lg text-sm flex items-center gap-1.5 transition-all disabled:opacity-50"
+            >
+              {guardandoWhatsApp ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Guardar</span>
+                </>
+              )}
+            </button>
+          </div>
+          <span className="block text-[10px] text-foreground/45">
+            Nota: Recordá ingresar el código de país (ej. 54 para Argentina) seguido del número completo, sin &quot;+&quot; ni espacios.
+          </span>
+        </form>
       </section>
     </div>
   );

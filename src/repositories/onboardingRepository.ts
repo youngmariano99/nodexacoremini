@@ -70,3 +70,18 @@ export async function registrarPerfilOnboarding(
 
   return { ok: true, data: undefined };
 }
+
+export async function obtenerTodasOpcionesOnboarding(
+  supabase: SupabaseClient
+): Promise<ResultadoRepositorio<(OpcionOnboarding & { activo: boolean })[]>> {
+  const { data, error } = await supabase
+    .from("problemas_onboarding_opciones")
+    .select("id, texto, activo")
+    .order("creado_en", { ascending: true });
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true, data: data || [] };
+}

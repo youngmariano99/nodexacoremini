@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { crearClienteSupabaseServidor } from "@/lib/supabase/server";
-import { obtenerOpcionesOnboarding } from "@/repositories/onboardingRepository";
+import { obtenerTodasOpcionesOnboarding } from "@/repositories/onboardingRepository";
 import { obtenerMetricasPruebaSocial, obtenerMapaDeDolores, obtenerPowerUsers } from "@/repositories/metricasRepository";
 import Navbar from "@/components/layout/Navbar";
 import AdminPanelClient from "./AdminPanelClient";
@@ -29,18 +29,20 @@ export default async function AdminPage() {
     redirect("/"); // Si no es admin, redirección silenciosa a la planilla principal
   }
 
-  // Cargar estadísticas
-  const [opcionesRes, socialRes, doloresRes, powerUsersRes] = await Promise.all([
-    obtenerOpcionesOnboarding(supabase),
+  // Cargar estadísticas y perfil de admin (WhatsApp)
+  const [opcionesRes, socialRes, doloresRes, powerUsersRes, adminPerfilRes] = await Promise.all([
+    obtenerTodasOpcionesOnboarding(supabase),
     obtenerMetricasPruebaSocial(supabase),
     obtenerMapaDeDolores(supabase),
     obtenerPowerUsers(supabase),
+    supabase.from("perfiles_onboarding").select("whatsapp").eq("id", user.id).maybeSingle(),
   ]);
 
   const opciones = opcionesRes.ok ? opcionesRes.data : [];
   const social = socialRes.ok ? socialRes.data : { quiebresEvitados: 0, totalProductos: 0, totalMovimientos: 0, horasAhorradas: 0 };
   const dolores = doloresRes.ok ? doloresRes.data : [];
   const powerUsers = powerUsersRes.ok ? powerUsersRes.data : [];
+  const adminWhatsApp = adminPerfilRes.data ? adminPerfilRes.data.whatsapp : "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,6 +60,7 @@ export default async function AdminPage() {
           metricasSociales={social}
           mapaDolores={dolores}
           powerUsers={powerUsers}
+          adminWhatsApp={adminWhatsApp}
         />
       </main>
     </div>

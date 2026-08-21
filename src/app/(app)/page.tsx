@@ -24,14 +24,22 @@ export default async function DashboardPage() {
     redirect("/onboarding");
   }
 
-  // Cargar datos en paralelo para mejorar rendimiento
-  const [productosRes, proveedoresRes] = await Promise.all([
+  // Cargar datos en paralelo para mejorar rendimiento y obtener WhatsApp del administrador
+  const [productosRes, proveedoresRes, adminPerfilRes] = await Promise.all([
     obtenerProductosCalculados(supabase),
     obtenerProveedores(supabase),
+    supabase.from("perfiles_onboarding").select("whatsapp, email"),
   ]);
 
   const productos = productosRes.ok ? productosRes.data : [];
   const proveedores = proveedoresRes.ok ? proveedoresRes.data : [];
+
+  const adminEmailsRaw = process.env.ADMIN_EMAILS || "";
+  const adminEmails = adminEmailsRaw.split(",").map(e => e.trim().toLowerCase());
+  const adminProfile = adminPerfilRes.data?.find(p => 
+    adminEmails.includes(p.email.toLowerCase()) || p.email.toLowerCase().includes("mari_")
+  );
+  const adminWhatsApp = adminProfile ? adminProfile.whatsapp : "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,7 +66,7 @@ export default async function DashboardPage() {
         />
 
         {/* Banner CTA para conversión de Marketing */}
-        <CTA />
+        <CTA adminWhatsApp={adminWhatsApp} />
       </main>
     </div>
   );

@@ -19,6 +19,17 @@ export async function crearProductoAction(formData: {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { ok: false, error: "No autenticado" };
 
+    // Validar límite operativo de 100 SKUs activos en plan gratuito
+    const { count, error: countError } = await supabase
+      .from("productos")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    if (countError) throw countError;
+    if (count !== null && count >= 100) {
+      return { ok: false, error: "Límite operativo alcanzado: El plan gratuito tiene un límite máximo de 100 productos (SKUs). Para gestionar hasta 1.000 SKUs con carga masiva, migrá a Nodexa Core." };
+    }
+
     const resultado = await crearProducto(supabase, user.id, validado);
     if (resultado.ok) {
       revalidatePath("/");

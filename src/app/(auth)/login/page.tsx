@@ -8,6 +8,7 @@ export default function LoginPage() {
   const [esRegistro, setEsRegistro] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
@@ -22,6 +23,17 @@ export default function LoginPage() {
 
     try {
       if (esRegistro) {
+        // Validar coincidencia de contraseña
+        if (password !== confirmPassword) {
+          throw new Error("Las contraseñas no coinciden. Por favor verificalas.");
+        }
+
+        // Validar contraseña segura (mínimo 8 caracteres, al menos una letra y un número)
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+        if (!passwordRegex.test(password)) {
+          throw new Error("Contraseña insegura: Debe tener al menos 8 caracteres, incluyendo letras y números.");
+        }
+
         const { data, error: signupErr } = await supabase.auth.signUp({
           email,
           password,
@@ -74,6 +86,7 @@ export default function LoginPage() {
               setEsRegistro(!esRegistro);
               setError(null);
               setMensajeExito(null);
+              setConfirmPassword("");
             }}
             className="font-medium text-brand hover:underline"
           >
@@ -118,7 +131,7 @@ export default function LoginPage() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-foreground/80">
-                Contraseña
+                {esRegistro ? "Contraseña (Mínimo 8 caracteres con letras y números)" : "Contraseña"}
               </label>
               <div className="mt-1">
                 <input
@@ -134,6 +147,26 @@ export default function LoginPage() {
                 />
               </div>
             </div>
+
+            {esRegistro && (
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground/80">
+                  Repetir Contraseña
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full bg-background border border-border rounded-lg text-foreground focus:border-brand py-2 px-3 outline-none"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+            )}
 
             <div>
               <button

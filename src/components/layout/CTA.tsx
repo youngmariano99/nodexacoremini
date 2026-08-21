@@ -1,6 +1,15 @@
 "use client";
 
-export default function CTA() {
+interface CTAProps {
+  adminWhatsApp?: string;
+}
+
+export default function CTA({ adminWhatsApp }: CTAProps) {
+  const cleanNumber = adminWhatsApp ? adminWhatsApp.replace(/[^0-9]/g, "") : "";
+  const whatsappUrl = cleanNumber 
+    ? `https://wa.me/${cleanNumber}?text=Hola!%20Vengo%20del%20Mini%20Sistema%20y%20quiero%20probar%20Nodexa%20Core%20Gratis` 
+    : "https://nodexa.com/comenzar";
+
   return (
     <div className="bg-surface border border-border rounded-xl p-6 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
       {/* Luz ambiental sutil verde */}
@@ -20,7 +29,7 @@ export default function CTA() {
 
       <div className="flex items-center gap-4 z-10 shrink-0">
         <a
-          href="https://nodexa.com/comenzar"
+          href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="px-5 py-3 bg-brand text-background hover:bg-brand/90 transition-all font-semibold rounded-lg text-sm text-center shadow-lg shadow-brand/10"
