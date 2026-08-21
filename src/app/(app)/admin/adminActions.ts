@@ -34,11 +34,12 @@ export async function sembrarDatosSimulacionAction() {
   try {
     const { supabase, user } = await verificarAdmin();
 
-    // A. Crear 3 proveedores de prueba
+    // A. Crear 4 proveedores de prueba
     const provsData = [
       { user_id: user.id, nombre: "Proveedor Alimentos Express", dias_demora: 3 },
       { user_id: user.id, nombre: "Importadora Textil Andina", dias_demora: 7 },
       { user_id: user.id, nombre: "Tecno Distribuidora", dias_demora: 5 },
+      { user_id: user.id, nombre: "Bazar y Deco del Plata", dias_demora: 4 },
     ];
 
     const { data: provs, error: errProvs } = await supabase
@@ -50,66 +51,124 @@ export async function sembrarDatosSimulacionAction() {
       throw new Error("Error al sembrar proveedores: " + errProvs?.message);
     }
 
-    const [provAlimentos, provTextil, provTecno] = provs;
+    const [provAlimentos, provTextil, provTecno, provBazar] = provs;
 
-    // B. Crear 6 productos en diferentes estados
-    const prodsData = [
-      // Normal: Stock actual > PdP (Stock Mínimo + Consumo * Demora)
-      // PdP: 10 + (5 * 3) = 25. Stock actual: 50. Estado: Normal
-      {
+    // B. Nombres para los 36 productos
+    const alimentosNames = [
+      "Arroz Integral 1kg", "Aceite de Girasol 1.5L", "Harina de Trigo 000", "Fideos Tallarín 500g",
+      "Azúcar Mascabo 1kg", "Yerba Mate Premium 1kg", "Café Tostado Molido 250g", "Sal Marina Fina 500g",
+      "Lentejas Secas 500g", "Leche Larga Vida 1L", "Puré de Tomate 520g", "Atún en Trozos 170g"
+    ];
+    const textilNames = [
+      "Remera Algodón Negra L", "Remera Algodón Blanca M", "Jeans Azul Slim 42", "Buzo Capucha Negro XL",
+      "Medias Deportivas Pack x3", "Gorra Trucker Ajustable", "Camisa Oxford Azul M", "Saco de Lana Gris L"
+    ];
+    const tecnoNames = [
+      "Auriculares Bluetooth In-Ear", "Cable Cargador USB-C 2m", "Mouse Inalámbrico Ergonómico", "Teclado Mecánico RGB",
+      "Powerbank 10000mAh", "Soporte Celular Escritorio", "Funda Protectora Transparente", "Adaptador HDMI a USB-C"
+    ];
+    const bazarNames = [
+      "Taza Cerámica Negra", "Botella Térmica 750ml", "Set Cubiertos Pack x24", "Termo Acero Inoxidable 1L",
+      "Tabla de picar Madera", "Sartén Antiadherente 24cm", "Hermético Vidrio Cuadrado", "Afilador Cuchillos Manual"
+    ];
+
+    const prodsData: {
+      user_id: string;
+      proveedor_id: string;
+      nombre: string;
+      stock_actual: number;
+      stock_minimo: number;
+      consumo_diario: number;
+    }[] = [];
+
+    // Llenar productos con estados variados (Normal, Alerta, Crítico)
+    // 1. Alimentos (12 productos)
+    alimentosNames.forEach((nombre, idx) => {
+      // 4 Normal, 4 Alerta, 4 Crítico
+      let stock_actual = 50;
+      let stock_minimo = 10;
+      let consumo_diario = 4;
+      if (idx % 3 === 1) { // Alerta (Stock <= Min + Consumo * Demora = 10 + 4 * 3 = 22)
+        stock_actual = 18;
+      } else if (idx % 3 === 2) { // Crítico (Stock <= Min = 15)
+        stock_minimo = 15;
+        stock_actual = 8;
+      }
+      prodsData.push({
         user_id: user.id,
         proveedor_id: provAlimentos.id,
-        nombre: "Arroz Integral 1kg",
-        stock_actual: 50,
-        stock_minimo: 10,
-        consumo_diario: 5,
-      },
-      // Alerta: Stock actual <= PdP (25) y > Stock Mínimo (10). Estado: Alerta
-      {
-        user_id: user.id,
-        proveedor_id: provAlimentos.id,
-        nombre: "Aceite de Girasol 1.5L",
-        stock_actual: 18,
-        stock_minimo: 10,
-        consumo_diario: 5,
-      },
-      // Crítico: Stock actual <= Stock Mínimo (15). Estado: Crítico
-      {
-        user_id: user.id,
-        proveedor_id: provAlimentos.id,
-        nombre: "Harina de Trigo 000",
-        stock_actual: 8,
-        stock_minimo: 15,
-        consumo_diario: 4,
-      },
-      // Alerta Textil: PdP: 20 + (2 * 7) = 34. Stock: 28. Estado: Alerta
-      {
+        nombre,
+        stock_actual,
+        stock_minimo,
+        consumo_diario,
+      });
+    });
+
+    // 2. Textil (8 productos)
+    textilNames.forEach((nombre, idx) => {
+      // 3 Normal, 3 Alerta, 2 Crítico
+      let stock_actual = 60;
+      let stock_minimo = 15;
+      let consumo_diario = 2;
+      if (idx % 3 === 1) { // Alerta (Stock <= 15 + 2 * 7 = 29)
+        stock_actual = 25;
+      } else if (idx % 3 === 2) { // Crítico (Stock <= 20)
+        stock_minimo = 20;
+        stock_actual = 12;
+      }
+      prodsData.push({
         user_id: user.id,
         proveedor_id: provTextil.id,
-        nombre: "Remera Algodón Negra L",
-        stock_actual: 28,
-        stock_minimo: 20,
-        consumo_diario: 2,
-      },
-      // Normal Tecno: PdP: 5 + (1 * 5) = 10. Stock: 15. Estado: Normal
-      {
+        nombre,
+        stock_actual,
+        stock_minimo,
+        consumo_diario,
+      });
+    });
+
+    // 3. Tecno (8 productos)
+    tecnoNames.forEach((nombre, idx) => {
+      // 3 Normal, 3 Alerta, 2 Crítico
+      let stock_actual = 45;
+      let stock_minimo = 8;
+      let consumo_diario = 3;
+      if (idx % 3 === 1) { // Alerta (Stock <= 8 + 3 * 5 = 23)
+        stock_actual = 18;
+      } else if (idx % 3 === 2) { // Crítico (Stock <= 12)
+        stock_minimo = 12;
+        stock_actual = 5;
+      }
+      prodsData.push({
         user_id: user.id,
         proveedor_id: provTecno.id,
-        nombre: "Auriculares Bluetooth In-Ear",
-        stock_actual: 15,
-        stock_minimo: 5,
-        consumo_diario: 1,
-      },
-      // Crítico Tecno: PdP: 5 + (2 * 5) = 15. Stock: 3. Estado: Crítico
-      {
+        nombre,
+        stock_actual,
+        stock_minimo,
+        consumo_diario,
+      });
+    });
+
+    // 4. Bazar (8 productos)
+    bazarNames.forEach((nombre, idx) => {
+      // 3 Normal, 3 Alerta, 2 Crítico
+      let stock_actual = 35;
+      let stock_minimo = 6;
+      let consumo_diario = 2;
+      if (idx % 3 === 1) { // Alerta (Stock <= 6 + 2 * 4 = 14)
+        stock_actual = 11;
+      } else if (idx % 3 === 2) { // Crítico (Stock <= 10)
+        stock_minimo = 10;
+        stock_actual = 4;
+      }
+      prodsData.push({
         user_id: user.id,
-        proveedor_id: provTecno.id,
-        nombre: "Cable Cargador USB-C 2m",
-        stock_actual: 3,
-        stock_minimo: 5,
-        consumo_diario: 2,
-      },
-    ];
+        proveedor_id: provBazar.id,
+        nombre,
+        stock_actual,
+        stock_minimo,
+        consumo_diario,
+      });
+    });
 
     const { data: prods, error: errProds } = await supabase
       .from("productos")
@@ -120,13 +179,22 @@ export async function sembrarDatosSimulacionAction() {
       throw new Error("Error al sembrar productos: " + errProds?.message);
     }
 
-    // C. Simular movimientos históricos
+    // C. Simular movimientos históricos realistas para el autocálculo
     const movimientos = [];
+    const ahora = new Date();
+
     for (const prod of prods) {
-      // Simular entradas y salidas iniciales
+      // Sembramos 1 entrada de compra y 3 salidas de ventas distribuidas en los últimos 30 días
+      const fecha1 = new Date(ahora.getTime() - 25 * 24 * 60 * 60 * 1000).toISOString();
+      const fecha2 = new Date(ahora.getTime() - 18 * 24 * 60 * 60 * 1000).toISOString();
+      const fecha3 = new Date(ahora.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString();
+      const fecha4 = new Date(ahora.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
+
       movimientos.push(
-        { user_id: user.id, producto_id: prod.id, tipo: "entrada", cantidad: 30 },
-        { user_id: user.id, producto_id: prod.id, tipo: "salida", cantidad: 5 }
+        { user_id: user.id, producto_id: prod.id, tipo: "entrada", cantidad: 100, creado_en: fecha1 },
+        { user_id: user.id, producto_id: prod.id, tipo: "salida", cantidad: prod.consumo_diario * 6, creado_en: fecha2 },
+        { user_id: user.id, producto_id: prod.id, tipo: "salida", cantidad: prod.consumo_diario * 5, creado_en: fecha3 },
+        { user_id: user.id, producto_id: prod.id, tipo: "salida", cantidad: prod.consumo_diario * 4, creado_en: fecha4 }
       );
     }
 

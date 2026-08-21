@@ -246,156 +246,306 @@ export default function PlanillaStockClient({
         </div>
       </div>
 
-      {/* Planilla / Tabla Principal */}
-      <div className="bg-surface border border-border rounded-xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-border text-sm">
-            <thead>
-              <tr className="text-left text-xs font-semibold text-foreground/50 uppercase tracking-wider bg-background/40">
-                <th className="px-6 py-4">Producto</th>
-                <th className="px-6 py-4">Proveedor (Demora)</th>
-                <th className="px-6 py-4 text-right">Consumo Diario</th>
-                <th className="px-6 py-4 text-right">Stock Mínimo</th>
-                <th className="px-6 py-4 text-right">Punto de Pedido</th>
-                <th className="px-6 py-4 text-center">Stock Actual</th>
-                <th className="px-6 py-4">Estado / Alerta</th>
-                <th className="px-6 py-4 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {productosFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-8 text-center text-foreground/40">
-                    No se encontraron productos. {listaProveedores.length === 0 && "Primero debés registrar al menos un proveedor."}
-                  </td>
+      {/* Planilla / Tabla Principal (Desktop y Mobile responsive layouts) */}
+      <div className="space-y-4">
+        {/* Layout de Tarjetas para Celulares / Mobile Layout */}
+        <div className="lg:hidden space-y-4">
+          {productosFiltrados.length === 0 ? (
+            <div className="bg-surface border border-border rounded-xl p-6 text-center text-foreground/40">
+              No se encontraron productos. {listaProveedores.length === 0 && "Primero debés registrar al menos un proveedor."}
+            </div>
+          ) : (
+            productosFiltrados.map((p) => (
+              <div
+                key={p.producto_id}
+                className={`bg-surface border border-border rounded-xl p-4 space-y-3 relative ${
+                  p.estado === "critico"
+                    ? "border-l-4 border-l-critical"
+                    : p.estado === "alerta"
+                      ? "border-l-4 border-l-alert"
+                      : ""
+                }`}
+              >
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <h4 className="font-bold text-base text-foreground">{p.producto_nombre}</h4>
+                    <span className="text-xs text-foreground/50 block font-medium">
+                      Proveedor: {p.proveedor_nombre} ({p.dias_demora} días demora)
+                    </span>
+                  </div>
+                  
+                  {/* Estado Visual */}
+                  <div>
+                    {p.estado === "critico" && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-critical/30 bg-critical/10 text-critical text-xs font-bold">
+                        CRÍTICO
+                      </span>
+                    )}
+                    {p.estado === "alerta" && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-alert/30 bg-alert/10 text-alert text-xs font-semibold">
+                        REABASTECER
+                      </span>
+                    )}
+                    {p.estado === "normal" && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-brand/30 bg-brand/10 text-brand text-xs font-semibold">
+                        NORMAL
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Métricas de Stock */}
+                <div className="grid grid-cols-3 gap-2 py-2 border-y border-border/40 text-center">
+                  <div>
+                    <span className="text-xs text-foreground/45 block uppercase font-semibold">Consumo</span>
+                    <span className="text-sm font-bold text-foreground numbers-mono">{p.consumo_diario}</span>
+                    <span className="text-xs text-foreground/35 block mt-0.5 font-medium leading-none">
+                      {p.es_autocalculado ? `Auto: ${p.ultima_estimacion?.split(" ")[1]}` : "Manual"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-foreground/45 block uppercase font-semibold">Mínimo</span>
+                    <span className="text-sm font-bold text-foreground/70 numbers-mono">{p.stock_minimo}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-foreground/45 block uppercase font-semibold">Punto Pedido</span>
+                    <span className="text-sm font-bold text-brand numbers-mono">{p.punto_pedido}</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-1">
+                  {/* Control Rápido de Stock */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 bg-background/40 border border-border rounded-lg p-1">
+                      <button
+                        onClick={async () => {
+                          if (cargando) return;
+                          setCargando(true);
+                          await registrarMovimientoStockAction({
+                            producto_id: p.producto_id,
+                            tipo: "salida",
+                            cantidad: 1,
+                            proveedor_id: p.proveedor_id
+                          });
+                          setCargando(false);
+                        }}
+                        disabled={p.stock_actual <= 0 || cargando}
+                        className="w-8 h-8 flex items-center justify-center text-sm font-bold border border-border hover:border-critical hover:text-critical bg-background hover:bg-background/90 rounded transition-all select-none disabled:opacity-30 min-touch-target"
+                      >
+                        -
+                      </button>
+                      <span className="font-bold text-base font-mono numbers-mono text-foreground w-8 text-center">
+                        {p.stock_actual}
+                      </span>
+                      <button
+                        onClick={async () => {
+                          if (cargando) return;
+                          setCargando(true);
+                          await registrarMovimientoStockAction({
+                            producto_id: p.producto_id,
+                            tipo: "entrada",
+                            cantidad: 1,
+                            proveedor_id: p.proveedor_id
+                          });
+                          setCargando(false);
+                        }}
+                        disabled={cargando}
+                        className="w-8 h-8 flex items-center justify-center text-sm font-bold border border-border hover:border-brand hover:text-brand bg-background hover:bg-background/90 rounded transition-all select-none min-touch-target"
+                      >
+                        +
+                      </button>
+                    </div>
+                    
+                    <button
+                      onClick={() => setProductoMovimiento(p)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold border border-border hover:border-brand hover:text-brand bg-background rounded transition-all select-none text-foreground/60 min-touch-target"
+                    >
+                      <Scale className="w-3.5 h-3.5 text-brand" />
+                      <span>Exacto</span>
+                    </button>
+                  </div>
+
+                  {/* Acciones */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleEdit(p)}
+                      className="p-2.5 hover:bg-border rounded text-foreground/60 hover:text-brand transition-all inline-flex min-touch-target"
+                      title="Editar"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleEliminar(p.producto_id)}
+                      className="p-2.5 hover:bg-border rounded text-foreground/60 hover:text-critical transition-all inline-flex min-touch-target"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Layout de Tabla para PC / Desktop Layout */}
+        <div className="hidden lg:block bg-surface border border-border rounded-xl overflow-hidden shadow-xl">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-border text-sm">
+              <thead>
+                <tr className="text-left text-xs font-semibold text-foreground/50 uppercase tracking-wider bg-background/40">
+                  <th className="px-6 py-4">Producto</th>
+                  <th className="px-6 py-4">Proveedor (Demora)</th>
+                  <th className="px-6 py-4 text-right">Consumo Diario</th>
+                  <th className="px-6 py-4 text-right">Stock Mínimo</th>
+                  <th className="px-6 py-4 text-right">Punto de Pedido</th>
+                  <th className="px-6 py-4 text-center">Stock Actual</th>
+                  <th className="px-6 py-4">Estado / Alerta</th>
+                  <th className="px-6 py-4 text-right">Acciones</th>
                 </tr>
-              ) : (
-                productosFiltrados.map((p) => (
-                  <tr
-                    key={p.producto_id}
-                    className={`hover:bg-surface-hover/20 transition-all ${p.estado === "critico"
-                      ? "bg-critical/5 border-l-2 border-l-critical"
-                      : p.estado === "alerta"
-                        ? "bg-alert/5 border-l-2 border-l-alert"
-                        : ""
-                      }`}
-                  >
-                    <td className="px-6 py-4 font-semibold text-foreground">{p.producto_nombre}</td>
-                    <td className="px-6 py-4">
-                      <span className="text-foreground/90 block font-medium">{p.proveedor_nombre}</span>
-                      <span className="text-xs text-foreground/40 block font-mono">({p.dias_demora} días demora)</span>
-                    </td>
-                    <td className="px-6 py-4 text-right font-medium numbers-mono">{p.consumo_diario}</td>
-                    <td className="px-6 py-4 text-right font-medium text-foreground/60 numbers-mono">{p.stock_minimo}</td>
-                    <td className="px-6 py-4 text-right font-bold text-brand numbers-mono">{p.punto_pedido}</td>
-
-                    {/* Visualizador de Stock Actual con botones rápidos y el botón de movimiento tipeado */}
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={async () => {
-                              if (cargando) return;
-                              setCargando(true);
-                              await registrarMovimientoStockAction({
-                                producto_id: p.producto_id,
-                                tipo: "salida",
-                                cantidad: 1,
-                                proveedor_id: p.proveedor_id
-                              });
-                              setCargando(false);
-                            }}
-                            disabled={p.stock_actual <= 0 || cargando}
-                            className="w-6 h-6 flex items-center justify-center text-xs font-bold border border-border hover:border-critical hover:text-critical bg-background/50 hover:bg-background rounded transition-all select-none disabled:opacity-30 min-touch-target"
-                            title="Descontar 1 unidad (Salida manual)"
-                          >
-                            -
-                          </button>
-                          <span className="font-bold text-base font-mono numbers-mono text-foreground w-12 text-center">
-                            {p.stock_actual}
-                          </span>
-                          <button
-                            onClick={async () => {
-                              if (cargando) return;
-                              setCargando(true);
-                              await registrarMovimientoStockAction({
-                                producto_id: p.producto_id,
-                                tipo: "entrada",
-                                cantidad: 1,
-                                proveedor_id: p.proveedor_id
-                              });
-                              setCargando(false);
-                            }}
-                            disabled={cargando}
-                            className="w-6 h-6 flex items-center justify-center text-xs font-bold border border-border hover:border-brand hover:text-brand bg-background/50 hover:bg-background rounded transition-all select-none min-touch-target"
-                            title="Sumar 1 unidad (Entrada manual)"
-                          >
-                            +
-                          </button>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setProductoMovimiento(p);
-                          }}
-                          className="flex items-center gap-1 px-2 py-0.5 text-xs font-bold border border-border hover:border-brand hover:text-brand bg-background/50 hover:bg-background rounded transition-all select-none text-foreground/60 mt-1 min-touch-target"
-                        >
-                          <Scale className="w-2.5 h-2.5 text-brand" />
-                          <span>Exacto</span>
-                        </button>
-                      </div>
-                    </td>
-
-                    {/* Estado Visual */}
-                    <td className="px-6 py-4">
-                      {p.estado === "critico" && (
-                        <div className="inline-flex flex-col gap-1">
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-critical/30 bg-critical/10 text-critical text-xs font-bold w-fit">
-                            <span className="w-1.5 h-1.5 rounded-full bg-critical animate-pulse" />
-                            CRÍTICO
-                          </div>
-                          <span className="text-xs text-critical/80 font-semibold uppercase tracking-wider block">
-                            Stock crítico / Quiebre
-                          </span>
-                        </div>
-                      )}
-                      {p.estado === "alerta" && (
-                        <div className="inline-flex flex-col gap-1">
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-alert/30 bg-alert/10 text-alert text-xs font-semibold w-fit">
-                            <span className="w-1.5 h-1.5 rounded-full bg-alert animate-pulse" />
-                            REABASTECER
-                          </div>
-                          <span className="text-xs text-alert/90 font-medium">
-                            Emitir orden. Tarda {p.dias_demora} días en llegar.
-                          </span>
-                        </div>
-                      )}
-                      {p.estado === "normal" && (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-brand/30 bg-brand/10 text-brand text-xs font-semibold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-brand" />
-                          NORMAL
-                        </div>
-                      )}
-                    </td>
-
-                    <td className="px-6 py-4 text-right space-x-1">
-                      <button
-                        onClick={() => handleEdit(p)}
-                        className="p-2 hover:bg-border rounded text-foreground/60 hover:text-brand transition-all inline-flex min-touch-target"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleEliminar(p.producto_id)}
-                        className="p-2 hover:bg-border rounded text-foreground/60 hover:text-critical transition-all inline-flex min-touch-target"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {productosFiltrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-foreground/40">
+                      No se encontraron productos. {listaProveedores.length === 0 && "Primero debés registrar al menos un proveedor."}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  productosFiltrados.map((p) => (
+                    <tr
+                      key={p.producto_id}
+                      className={`hover:bg-surface-hover/20 transition-all ${p.estado === "critico"
+                        ? "bg-critical/5 border-l-2 border-l-critical"
+                        : p.estado === "alerta"
+                          ? "bg-alert/5 border-l-2 border-l-alert"
+                          : ""
+                        }`}
+                    >
+                      <td className="px-6 py-4 font-semibold text-foreground">{p.producto_nombre}</td>
+                      <td className="px-6 py-4">
+                        <span className="text-foreground/90 block font-medium">{p.proveedor_nombre}</span>
+                        <span className="text-xs text-foreground/40 block font-mono">({p.dias_demora} días demora)</span>
+                      </td>
+                      <td className="px-6 py-4 text-right font-medium">
+                        <div className="flex flex-col items-end">
+                          <span className="numbers-mono">{p.consumo_diario}</span>
+                          <span className="text-xs text-foreground/40 block mt-0.5 font-medium leading-none" title={p.es_autocalculado ? `Estimado el ${p.ultima_estimacion}` : "Ingreso manual"}>
+                            {p.es_autocalculado ? `(Auto: ${p.ultima_estimacion?.split(" ")[1]})` : "(Manual)"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right font-medium text-foreground/60 numbers-mono">{p.stock_minimo}</td>
+                      <td className="px-6 py-4 text-right font-bold text-brand numbers-mono">{p.punto_pedido}</td>
+
+                      {/* Visualizador de Stock Actual con botones rápidos y el botón de movimiento tipeado */}
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col items-center gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={async () => {
+                                if (cargando) return;
+                                setCargando(true);
+                                await registrarMovimientoStockAction({
+                                  producto_id: p.producto_id,
+                                  tipo: "salida",
+                                  cantidad: 1,
+                                  proveedor_id: p.proveedor_id
+                                });
+                                setCargando(false);
+                              }}
+                              disabled={p.stock_actual <= 0 || cargando}
+                              className="w-6 h-6 flex items-center justify-center text-xs font-bold border border-border hover:border-critical hover:text-critical bg-background/50 hover:bg-background rounded transition-all select-none disabled:opacity-30 min-touch-target"
+                              title="Descontar 1 unidad (Salida manual)"
+                            >
+                              -
+                            </button>
+                            <span className="font-bold text-base font-mono numbers-mono text-foreground w-12 text-center">
+                              {p.stock_actual}
+                            </span>
+                            <button
+                              onClick={async () => {
+                                if (cargando) return;
+                                setCargando(true);
+                                await registrarMovimientoStockAction({
+                                  producto_id: p.producto_id,
+                                  tipo: "entrada",
+                                  cantidad: 1,
+                                  proveedor_id: p.proveedor_id
+                                });
+                                setCargando(false);
+                              }}
+                              disabled={cargando}
+                              className="w-6 h-6 flex items-center justify-center text-xs font-bold border border-border hover:border-brand hover:text-brand bg-background/50 hover:bg-background rounded transition-all select-none min-touch-target"
+                              title="Sumar 1 unidad (Entrada manual)"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setProductoMovimiento(p);
+                            }}
+                            className="flex items-center gap-1 px-2 py-0.5 text-xs font-bold border border-border hover:border-brand hover:text-brand bg-background/50 hover:bg-background rounded transition-all select-none text-foreground/60 mt-1 min-touch-target"
+                          >
+                            <Scale className="w-2.5 h-2.5 text-brand" />
+                            <span>Exacto</span>
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* Estado Visual */}
+                      <td className="px-6 py-4">
+                        {p.estado === "critico" && (
+                          <div className="inline-flex flex-col gap-1">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-critical/30 bg-critical/10 text-critical text-xs font-bold w-fit">
+                              <span className="w-1.5 h-1.5 rounded-full bg-critical animate-pulse" />
+                              CRÍTICO
+                            </div>
+                            <span className="text-xs text-critical/80 font-semibold uppercase tracking-wider block">
+                              Stock crítico / Quiebre
+                            </span>
+                          </div>
+                        )}
+                        {p.estado === "alerta" && (
+                          <div className="inline-flex flex-col gap-1">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-alert/30 bg-alert/10 text-alert text-xs font-semibold w-fit">
+                              <span className="w-1.5 h-1.5 rounded-full bg-alert animate-pulse" />
+                              REABASTECER
+                            </div>
+                            <span className="text-xs text-alert/90 font-medium">
+                              Emitir orden. Tarda {p.dias_demora} días en llegar.
+                            </span>
+                          </div>
+                        )}
+                        {p.estado === "normal" && (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-brand/30 bg-brand/10 text-brand text-xs font-semibold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+                            NORMAL
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4 text-right space-x-1">
+                        <button
+                          onClick={() => handleEdit(p)}
+                          className="p-2 hover:bg-border rounded text-foreground/60 hover:text-brand transition-all inline-flex min-touch-target"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleEliminar(p.producto_id)}
+                          className="p-2 hover:bg-border rounded text-foreground/60 hover:text-critical transition-all inline-flex min-touch-target"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

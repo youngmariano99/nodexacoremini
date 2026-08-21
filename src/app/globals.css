@@ -81,3 +81,10 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus {
   border-color: var(--brand-active);
 }
+
+/* Espaciado para evitar superposición de la barra de navegación móvil */
+@media (max-width: 768px) {
+  body {
+    padding-bottom: 72px;
+  }
+}
