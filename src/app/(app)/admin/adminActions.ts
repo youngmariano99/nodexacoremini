@@ -85,14 +85,13 @@ export async function sembrarDatosSimulacionAction() {
     // 1. Alimentos (12 productos)
     alimentosNames.forEach((nombre, idx) => {
       // 4 Normal, 4 Alerta, 4 Crítico
-      let stock_actual = 50;
+      let stock_actual = 90; // Normal (Final = 90 - 60 = 30 > PdP 16)
       let stock_minimo = 10;
       let consumo_diario = 4;
-      if (idx % 3 === 1) { // Alerta (Stock <= Min + Consumo * Demora = 10 + 4 * 3 = 22)
-        stock_actual = 18;
-      } else if (idx % 3 === 2) { // Crítico (Stock <= Min = 15)
-        stock_minimo = 15;
-        stock_actual = 8;
+      if (idx % 3 === 1) { // Alerta (Final = 73 - 60 = 13 <= PdP 16)
+        stock_actual = 73;
+      } else if (idx % 3 === 2) { // Crítico (Final = 65 - 60 = 5 <= Min 10)
+        stock_actual = 65;
       }
       prodsData.push({
         user_id: user.id,
@@ -107,14 +106,13 @@ export async function sembrarDatosSimulacionAction() {
     // 2. Textil (8 productos)
     textilNames.forEach((nombre, idx) => {
       // 3 Normal, 3 Alerta, 2 Crítico
-      let stock_actual = 60;
+      let stock_actual = 65; // Normal (Final = 65 - 30 = 35 > PdP 22)
       let stock_minimo = 15;
       let consumo_diario = 2;
-      if (idx % 3 === 1) { // Alerta (Stock <= 15 + 2 * 7 = 29)
-        stock_actual = 25;
-      } else if (idx % 3 === 2) { // Crítico (Stock <= 20)
-        stock_minimo = 20;
-        stock_actual = 12;
+      if (idx % 3 === 1) { // Alerta (Final = 48 - 30 = 18 <= PdP 22)
+        stock_actual = 48;
+      } else if (idx % 3 === 2) { // Crítico (Final = 38 - 30 = 8 <= Min 15)
+        stock_actual = 38;
       }
       prodsData.push({
         user_id: user.id,
@@ -129,14 +127,13 @@ export async function sembrarDatosSimulacionAction() {
     // 3. Tecno (8 productos)
     tecnoNames.forEach((nombre, idx) => {
       // 3 Normal, 3 Alerta, 2 Crítico
-      let stock_actual = 45;
+      let stock_actual = 70; // Normal (Final = 70 - 45 = 25 > PdP 15.5)
       let stock_minimo = 8;
       let consumo_diario = 3;
-      if (idx % 3 === 1) { // Alerta (Stock <= 8 + 3 * 5 = 23)
-        stock_actual = 18;
-      } else if (idx % 3 === 2) { // Crítico (Stock <= 12)
-        stock_minimo = 12;
-        stock_actual = 5;
+      if (idx % 3 === 1) { // Alerta (Final = 56 - 45 = 11 <= PdP 15.5)
+        stock_actual = 56;
+      } else if (idx % 3 === 2) { // Crítico (Final = 49 - 45 = 4 <= Min 8)
+        stock_actual = 49;
       }
       prodsData.push({
         user_id: user.id,
@@ -151,14 +148,13 @@ export async function sembrarDatosSimulacionAction() {
     // 4. Bazar (8 productos)
     bazarNames.forEach((nombre, idx) => {
       // 3 Normal, 3 Alerta, 2 Crítico
-      let stock_actual = 35;
+      let stock_actual = 46; // Normal (Final = 46 - 30 = 16 > PdP 10)
       let stock_minimo = 6;
       let consumo_diario = 2;
-      if (idx % 3 === 1) { // Alerta (Stock <= 6 + 2 * 4 = 14)
-        stock_actual = 11;
-      } else if (idx % 3 === 2) { // Crítico (Stock <= 10)
-        stock_minimo = 10;
-        stock_actual = 4;
+      if (idx % 3 === 1) { // Alerta (Final = 38 - 30 = 8 <= PdP 10)
+        stock_actual = 38;
+      } else if (idx % 3 === 2) { // Crítico (Final = 33 - 30 = 3 <= Min 6)
+        stock_actual = 33;
       }
       prodsData.push({
         user_id: user.id,
@@ -184,14 +180,12 @@ export async function sembrarDatosSimulacionAction() {
     const ahora = new Date();
 
     for (const prod of prods) {
-      // Sembramos 1 entrada de compra y 3 salidas de ventas distribuidas en los últimos 30 días
-      const fecha1 = new Date(ahora.getTime() - 25 * 24 * 60 * 60 * 1000).toISOString();
+      // Sembramos 3 salidas de ventas distribuidas en los últimos 30 días (sin entrada inicial de 100)
       const fecha2 = new Date(ahora.getTime() - 18 * 24 * 60 * 60 * 1000).toISOString();
       const fecha3 = new Date(ahora.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString();
       const fecha4 = new Date(ahora.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
 
       movimientos.push(
-        { user_id: user.id, producto_id: prod.id, tipo: "entrada", cantidad: 100, creado_en: fecha1 },
         { user_id: user.id, producto_id: prod.id, tipo: "salida", cantidad: prod.consumo_diario * 6, creado_en: fecha2 },
         { user_id: user.id, producto_id: prod.id, tipo: "salida", cantidad: prod.consumo_diario * 5, creado_en: fecha3 },
         { user_id: user.id, producto_id: prod.id, tipo: "salida", cantidad: prod.consumo_diario * 4, creado_en: fecha4 }
