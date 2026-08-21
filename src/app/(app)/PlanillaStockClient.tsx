@@ -179,14 +179,21 @@ export default function PlanillaStockClient({
       )}
 
       {/* Explicación del PdP */}
-      <div className="bg-surface border border-border rounded-xl p-4 flex gap-4 text-sm text-foreground/80">
-        <HelpCircle className="w-5 h-5 text-brand shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <h4 className="font-semibold text-foreground">¿Cómo funciona la Planilla Inteligente?</h4>
-          <p className="text-xs leading-relaxed text-foreground/60">
-            Calculamos tu <strong className="text-foreground">Punto de Pedido (PdP)</strong> usando la fórmula:
-            <code className="bg-background px-1.5 py-0.5 rounded text-brand font-mono ml-1">Stock Mínimo + (Consumo Diario * Demora del Proveedor)</code>.
-            Cuando tu stock cae por debajo de este punto, el estado cambiará a <span className="text-alert font-bold">Alerta (Amarillo)</span> para que emitas una orden al proveedor. Si cae por debajo del Stock Mínimo de seguridad, entrará en <span className="text-critical font-bold">Estado Crítico (Rojo)</span>.
+      <div className="bg-surface border border-border rounded-xl p-5 flex gap-4 text-sm md:text-base text-foreground/80">
+        <HelpCircle className="w-6 h-6 text-brand shrink-0 mt-0.5" />
+        <div className="space-y-2">
+          <h4 className="font-bold text-base md:text-lg text-foreground">¿Cómo funciona esta Planilla Inteligente?</h4>
+          <p className="leading-relaxed text-foreground/75">
+            Esta planilla te ayuda a saber cuándo tenés que reponer tus productos para no quedarte sin mercadería en tu negocio.
+            Calculamos tu <strong className="text-foreground font-bold">Alerta de Reposición (Punto de Pedido)</strong> sumando el stock mínimo de seguridad que querés tener de reserva y lo que estimamos que vas a vender mientras esperás que llegue el camión del proveedor:
+          </p>
+          <div className="bg-background/80 border border-border/80 px-4 py-2.5 rounded-lg text-brand font-mono text-xs md:text-sm w-fit font-semibold leading-relaxed">
+            Alerta de Reposición = Stock Mínimo + (Consumo Diario × Días de Demora)
+          </div>
+          <p className="leading-relaxed text-foreground/75">
+            • Si tu stock actual cae por debajo de este número, verás una <span className="text-alert font-bold">Alerta Amarilla (Reabastecer)</span> para indicarte que es momento de hacer el pedido.
+            <br />
+            • Si el stock cae por debajo del Stock Mínimo de seguridad, entrará en <span className="text-critical font-bold">Alerta Roja (Crítico)</span> indicando peligro inminente de quedarte sin nada.
           </p>
         </div>
       </div>

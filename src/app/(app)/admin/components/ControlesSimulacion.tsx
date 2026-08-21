@@ -40,7 +40,7 @@ export default function ControlesSimulacion({
           )}
           <div className="text-left">
             <span className="block font-bold">Sembrar Demo PLG</span>
-            <span className="block text-xs font-normal opacity-75">3 provs, 6 prods y 12 movs</span>
+            <span className="block text-xs font-normal opacity-75">4 provs, 36 prods y 144 movs</span>
           </div>
         </button>
 

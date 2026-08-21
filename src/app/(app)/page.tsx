@@ -26,7 +26,7 @@ export default async function DashboardPage() {
 
   // Cargar datos en paralelo para mejorar rendimiento y obtener WhatsApp del administrador
   const [productosRes, proveedoresRes, adminPerfilRes] = await Promise.all([
-    obtenerProductosCalculados(supabase),
+    obtenerProductosCalculados(supabase, user.id),
     obtenerProveedores(supabase),
     supabase.from("perfiles_onboarding").select("whatsapp, email"),
   ]);
