@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { crearClienteSupabaseServidor, crearClienteSupabaseAdmin } from "@/lib/supabase/server";
-import { obtenerTrazabilidadUsuarios, obtenerHistorialMovimientosTrazabilidad } from "@/repositories/metricasRepository";
+import { obtenerTrazabilidadUsuarios, obtenerHistorialMovimientosTrazabilidad, obtenerErrorLogs } from "@/repositories/metricasRepository";
 
 
 // Lista de administradores permitidos (se puede expandir vía .env)
@@ -374,5 +374,36 @@ export async function obtenerHistorialMovimientosAction() {
     return await obtenerHistorialMovimientosTrazabilidad(supabase);
   } catch (error: any) {
     return { ok: false, error: error.message };
+  }
+}
+
+export async function obtenerErrorLogsAction() {
+  try {
+    const { supabase } = await verificarAdmin();
+    return await obtenerErrorLogs(supabase);
+  } catch (error: any) {
+    return { ok: false, error: error.message };
+  }
+}
+
+export async function registrarErrorAction(codigo: string, mensaje: string, stack?: string, contexto?: any) {
+  try {
+    const supabase = await crearClienteSupabaseServidor();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { error } = await supabase.from("error_logs").insert({
+      user_id: user?.id || null,
+      email: user?.email || null,
+      codigo_error: codigo,
+      mensaje: mensaje,
+      stack: stack || null,
+      contexto: contexto || null,
+    });
+    
+    if (error) {
+      console.error("Error al registrar log en BD:", error.message);
+    }
+  } catch (err) {
+    console.error("Excepción al intentar registrar log de error:", err);
   }
 }

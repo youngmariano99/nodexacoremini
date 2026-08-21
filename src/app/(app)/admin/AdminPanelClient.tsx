@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { TrendingUp, Activity, AlertTriangle, Check, Phone, User } from "lucide-react";
+import { TrendingUp, Activity, AlertTriangle, Check, Phone, User, ShieldAlert } from "lucide-react";
 import { OpcionOnboarding } from "@/repositories/onboardingRepository";
-import { MetricasPruebaSocial, MetricaDolor, PowerUser, UsuarioTrazabilidad, MovimientoTrazabilidad } from "@/repositories/metricasRepository";
+import { MetricasPruebaSocial, MetricaDolor, PowerUser, UsuarioTrazabilidad, MovimientoTrazabilidad, ErrorLog } from "@/repositories/metricasRepository";
 import {
   sembrarDatosSimulacionAction,
   resetearDatosAction,
@@ -18,6 +18,7 @@ import ControlesSimulacion from "./components/ControlesSimulacion";
 import ConfiguracionWhatsApp from "./components/ConfiguracionWhatsApp";
 import CatalogoPreguntas from "./components/CatalogoPreguntas";
 import TableroTrazabilidad from "./components/TableroTrazabilidad";
+import TableroLogs from "./components/TableroLogs";
 
 interface AdminPanelClientProps {
   opcionesOnboarding: (OpcionOnboarding & { activo: boolean })[];
@@ -27,6 +28,7 @@ interface AdminPanelClientProps {
   adminWhatsApp: string;
   trazabilidadUsuarios: UsuarioTrazabilidad[];
   historialMovimientos: MovimientoTrazabilidad[];
+  errorLogs: ErrorLog[];
 }
 
 export default function AdminPanelClient({
@@ -37,6 +39,7 @@ export default function AdminPanelClient({
   adminWhatsApp,
   trazabilidadUsuarios,
   historialMovimientos,
+  errorLogs,
 }: AdminPanelClientProps) {
   const [nuevaOpcion, setNuevaOpcion] = useState("");
   const [cargandoAccion, setCargandoAccion] = useState<string | null>(null);
@@ -50,8 +53,8 @@ export default function AdminPanelClient({
   const [supportWhatsApp, setSupportWhatsApp] = useState(adminWhatsApp);
   const [guardandoWhatsApp, setGuardandoWhatsApp] = useState(false);
 
-  // Estados de Trazabilidad
-  const [pestanaActiva, setPestanaActiva] = useState<"dashboard" | "trazabilidad">("dashboard");
+  // Estados de Trazabilidad y Logs
+  const [pestanaActiva, setPestanaActiva] = useState<"dashboard" | "trazabilidad" | "logs">("dashboard");
 
   const handleSimulacion = async (key: string, fn: () => Promise<any>) => {
     setCargandoAccion(key);
@@ -117,7 +120,7 @@ export default function AdminPanelClient({
   return (
     <div className="space-y-8">
       {/* Sistema de Solapas (Tabs) */}
-      <div className="flex border-b border-border">
+      <div className="flex border-b border-border overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setPestanaActiva("dashboard")}
           className={`py-3 px-6 font-semibold text-sm border-b-2 transition-all flex items-center gap-2 min-touch-target ${
@@ -139,6 +142,17 @@ export default function AdminPanelClient({
         >
           <Activity className="w-4 h-4" />
           <span>Trazabilidad de Usuarios</span>
+        </button>
+        <button
+          onClick={() => setPestanaActiva("logs")}
+          className={`py-3 px-6 font-semibold text-sm border-b-2 transition-all flex items-center gap-2 min-touch-target ${
+            pestanaActiva === "logs"
+              ? "border-brand text-brand"
+              : "border-transparent text-foreground/50 hover:text-foreground"
+          }`}
+        >
+          <ShieldAlert className="w-4 h-4" />
+          <span>Logs de Errores</span>
         </button>
       </div>
 
@@ -299,6 +313,12 @@ export default function AdminPanelClient({
         <TableroTrazabilidad
           trazabilidadUsuarios={trazabilidadUsuarios}
           historialMovimientos={historialMovimientos}
+        />
+      )}
+
+      {pestanaActiva === "logs" && (
+        <TableroLogs
+          errorLogs={errorLogs}
         />
       )}
     </div>
