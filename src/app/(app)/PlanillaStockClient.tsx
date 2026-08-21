@@ -232,6 +232,17 @@ export default function PlanillaStockClient({
         </div>
       </div>
 
+      {/* Banner de Fricción / Upsell Educativo */}
+      <div className="bg-brand/5 border border-brand/20 rounded-xl p-4 flex gap-4 text-sm text-foreground/80">
+        <HelpCircle className="w-5 h-5 text-brand shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <h4 className="font-semibold text-foreground">💡 Tip de Eficiencia Operativa</h4>
+          <p className="text-xs leading-relaxed text-foreground/60">
+            ¿Cansado de descontar a mano cada unidad? En <strong>Nodexa Core</strong>, el stock se descuenta solo <strong>al registrar una venta</strong>. El mini sistema no genera reportes de &quot;productos más vendidos del mes&quot;, pero la versión completa automatiza todo tu historial de ventas y compras.
+          </p>
+        </div>
+      </div>
+
       {/* Cabecera y Filtros */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
@@ -608,12 +619,50 @@ export default function PlanillaStockClient({
                     <td className="px-6 py-4 text-right font-medium text-foreground/60 numbers-mono">{p.stock_minimo}</td>
                     <td className="px-6 py-4 text-right font-bold text-brand numbers-mono">{p.punto_pedido}</td>
 
-                    {/* Visualizador de Stock Actual con el nuevo botón de movimiento tipeado */}
+                    {/* Visualizador de Stock Actual con botones rápidos y el botón de movimiento tipeado */}
                     <td className="px-6 py-4">
                       <div className="flex flex-col items-center gap-1.5">
-                        <span className="font-bold text-base font-mono numbers-mono text-foreground">
-                          {p.stock_actual}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={async () => {
+                              if (cargando) return;
+                              setCargando(true);
+                              await registrarMovimientoStockAction({
+                                producto_id: p.producto_id,
+                                tipo: "salida",
+                                cantidad: 1,
+                                proveedor_id: p.proveedor_id
+                              });
+                              setCargando(false);
+                            }}
+                            disabled={p.stock_actual <= 0 || cargando}
+                            className="w-6 h-6 flex items-center justify-center text-xs font-bold border border-border hover:border-critical hover:text-critical bg-background/50 hover:bg-background rounded transition-all select-none disabled:opacity-30"
+                            title="Descontar 1 unidad (Salida manual)"
+                          >
+                            -
+                          </button>
+                          <span className="font-bold text-base font-mono numbers-mono text-foreground w-12 text-center">
+                            {p.stock_actual}
+                          </span>
+                          <button
+                            onClick={async () => {
+                              if (cargando) return;
+                              setCargando(true);
+                              await registrarMovimientoStockAction({
+                                producto_id: p.producto_id,
+                                tipo: "entrada",
+                                cantidad: 1,
+                                proveedor_id: p.proveedor_id
+                              });
+                              setCargando(false);
+                            }}
+                            disabled={cargando}
+                            className="w-6 h-6 flex items-center justify-center text-xs font-bold border border-border hover:border-brand hover:text-brand bg-background/50 hover:bg-background rounded transition-all select-none"
+                            title="Sumar 1 unidad (Entrada manual)"
+                          >
+                            +
+                          </button>
+                        </div>
                         <button
                           onClick={() => {
                             setProductoMovimiento(p);
@@ -621,10 +670,10 @@ export default function PlanillaStockClient({
                             // Preseleccionar proveedor por defecto
                             setMovProveedorId(p.proveedor_id);
                           }}
-                          className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold border border-border hover:border-brand hover:text-brand bg-background/50 hover:bg-background rounded transition-all select-none text-foreground/70"
+                          className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold border border-border hover:border-brand hover:text-brand bg-background/50 hover:bg-background rounded transition-all select-none text-foreground/60 mt-1"
                         >
-                          <Scale className="w-3 h-3 text-brand" />
-                          <span>Movimiento</span>
+                          <Scale className="w-2.5 h-2.5 text-brand" />
+                          <span>Exacto</span>
                         </button>
                       </div>
                     </td>
@@ -632,9 +681,14 @@ export default function PlanillaStockClient({
                     {/* Estado Visual */}
                     <td className="px-6 py-4">
                       {p.estado === "critico" && (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-critical/30 bg-critical/10 text-critical text-xs font-semibold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-critical animate-pulse" />
-                          CRÍTICO
+                        <div className="inline-flex flex-col gap-1">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-critical/30 bg-critical/10 text-critical text-xs font-bold w-fit">
+                            <span className="w-1.5 h-1.5 rounded-full bg-critical animate-pulse" />
+                            CRÍTICO
+                          </div>
+                          <span className="text-[10px] text-critical/80 font-semibold uppercase tracking-wider block">
+                            Stock crítico / Quiebre
+                          </span>
                         </div>
                       )}
                       {p.estado === "alerta" && (
@@ -643,8 +697,8 @@ export default function PlanillaStockClient({
                             <span className="w-1.5 h-1.5 rounded-full bg-alert animate-pulse" />
                             REABASTECER
                           </div>
-                          <span className="text-[10px] text-alert/80 font-medium">
-                            Emitir orden al proveedor
+                          <span className="text-[10px] text-alert/90 font-medium">
+                            Emitir orden. Tarda {p.dias_demora} días en llegar.
                           </span>
                         </div>
                       )}

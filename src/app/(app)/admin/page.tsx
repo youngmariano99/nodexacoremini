@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { crearClienteSupabaseServidor } from "@/lib/supabase/server";
-import { obtenerOpcionesOnboarding } from "@/repositories/onboardingRepository";
-import { obtenerMetricasPruebaSocial, obtenerMapaDeDolores, obtenerPowerUsers } from "@/repositories/metricasRepository";
+import { crearClienteSupabaseServidor, crearClienteSupabaseAdmin } from "@/lib/supabase/server";
+import { obtenerTodasOpcionesOnboarding } from "@/repositories/onboardingRepository";
+import { obtenerMetricasPruebaSocial, obtenerMapaDeDolores, obtenerPowerUsers, obtenerTrazabilidadUsuarios, obtenerHistorialMovimientosTrazabilidad } from "@/repositories/metricasRepository";
 import Navbar from "@/components/layout/Navbar";
 import AdminPanelClient from "./AdminPanelClient";
 
@@ -29,18 +29,29 @@ export default async function AdminPage() {
     redirect("/"); // Si no es admin, redirección silenciosa a la planilla principal
   }
 
-  // Cargar estadísticas
-  const [opcionesRes, socialRes, doloresRes, powerUsersRes] = await Promise.all([
-    obtenerOpcionesOnboarding(supabase),
+  // Inicializar cliente admin de fallback si corresponde
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  const usesPlaceholder = serviceRoleKey === "tu-service-role-key-aqui" || !serviceRoleKey;
+  const supabaseAdmin = usesPlaceholder ? null : crearClienteSupabaseAdmin();
+
+  // Cargar estadísticas, trazabilidad y perfil de admin (WhatsApp)
+  const [opcionesRes, socialRes, doloresRes, powerUsersRes, adminPerfilRes, trazabilidadRes, historialRes] = await Promise.all([
+    obtenerTodasOpcionesOnboarding(supabase),
     obtenerMetricasPruebaSocial(supabase),
     obtenerMapaDeDolores(supabase),
     obtenerPowerUsers(supabase),
+    supabase.from("perfiles_onboarding").select("whatsapp").eq("id", user.id).maybeSingle(),
+    obtenerTrazabilidadUsuarios(supabase, supabaseAdmin),
+    obtenerHistorialMovimientosTrazabilidad(supabase),
   ]);
 
   const opciones = opcionesRes.ok ? opcionesRes.data : [];
   const social = socialRes.ok ? socialRes.data : { quiebresEvitados: 0, totalProductos: 0, totalMovimientos: 0, horasAhorradas: 0 };
   const dolores = doloresRes.ok ? doloresRes.data : [];
   const powerUsers = powerUsersRes.ok ? powerUsersRes.data : [];
+  const adminWhatsApp = adminPerfilRes.data ? adminPerfilRes.data.whatsapp : "";
+  const trazabilidadUsuarios = trazabilidadRes.ok ? trazabilidadRes.data : [];
+  const historialMovimientos = historialRes.ok ? historialRes.data : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,6 +69,9 @@ export default async function AdminPage() {
           metricasSociales={social}
           mapaDolores={dolores}
           powerUsers={powerUsers}
+          adminWhatsApp={adminWhatsApp}
+          trazabilidadUsuarios={trazabilidadUsuarios || []}
+          historialMovimientos={historialMovimientos || []}
         />
       </main>
     </div>
