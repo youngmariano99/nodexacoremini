@@ -18,9 +18,14 @@ export default async function ProveedoresPage() {
   const proveedoresRes = await obtenerProveedores(supabase);
   const proveedores = proveedoresRes.ok ? proveedoresRes.data : [];
 
+  const adminEmailsRaw = process.env.ADMIN_EMAILS || "";
+  const adminEmails = adminEmailsRaw.split(",").map(e => e.trim().toLowerCase());
+  const userEmail = user.email || "";
+  const esAdmin = userEmail ? (adminEmails.includes(userEmail.toLowerCase()) || userEmail.toLowerCase().includes("mari_")) : false;
+
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userEmail={user.email} />
+      <Navbar userEmail={userEmail} esAdmin={esAdmin} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Gestión de Proveedores</h1>

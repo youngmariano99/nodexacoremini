@@ -18,6 +18,7 @@
   /* Tipografía JetBrains Mono para números */
   --font-mono: "JetBrains Mono", monospace;
   --font-sans: "Inter", sans-serif;
+  --min-touch-target: 44px;
 }
 
 @theme inline {
@@ -31,15 +32,33 @@
   --color-critical: var(--state-critical);
   --font-mono: var(--font-mono);
   --font-sans: var(--font-sans);
+  --font-size-xs: 0.875rem; /* 14px minimum absolute */
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  font-size: 1rem; /* Base recomendada de 16px */
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Área táctil mínima de 44x44px sin alterar el layout visual de botones y enlaces pequeños */
+.min-touch-target {
+  position: relative;
+}
+.min-touch-target::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: var(--min-touch-target);
+  min-height: var(--min-touch-target);
+  width: 100%;
+  height: 100%;
 }
 
 /* Números y métricas financieras/operativas */
@@ -61,4 +80,11 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   border-color: var(--brand-active);
+}
+
+/* Espaciado para evitar superposición de la barra de navegación móvil */
+@media (max-width: 768px) {
+  body {
+    padding-bottom: 72px;
+  }
 }
