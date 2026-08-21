@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { crearClienteSupabaseServidor } from "@/lib/supabase/server";
 import { productoSchema, movimientoStockSchema } from "@/lib/validaciones";
 import { crearProducto, actualizarProducto, eliminarProducto } from "@/repositories/productosRepository";
+import { registrarErrorAction } from "./admin/adminActions";
 
 export async function crearProductoAction(formData: {
   nombre: string;
@@ -36,6 +37,13 @@ export async function crearProductoAction(formData: {
     }
     return resultado;
   } catch (error: any) {
+    const isVal = !!error.errors;
+    await registrarErrorAction(
+      isVal ? "NX-VAL-003" : "NX-DB-001",
+      error.message || "Error al crear producto",
+      error.stack,
+      { formData }
+    );
     if (error.errors) return { ok: false, error: error.errors[0]?.message || "Datos inválidos" };
     return { ok: false, error: error.message || "Error al procesar" };
   }
@@ -61,6 +69,13 @@ export async function actualizarProductoAction(
     }
     return resultado;
   } catch (error: any) {
+    const isVal = !!error.errors;
+    await registrarErrorAction(
+      isVal ? "NX-VAL-003" : "NX-DB-001",
+      error.message || "Error al actualizar producto",
+      error.stack,
+      { id, formData }
+    );
     if (error.errors) return { ok: false, error: error.errors[0]?.message || "Datos inválidos" };
     return { ok: false, error: error.message || "Error al procesar" };
   }
@@ -76,6 +91,12 @@ export async function eliminarProductoAction(id: string) {
     }
     return resultado;
   } catch (error: any) {
+    await registrarErrorAction(
+      "NX-DB-001",
+      error.message || "Error al eliminar producto",
+      error.stack,
+      { id }
+    );
     return { ok: false, error: error.message || "Error al procesar" };
   }
 }
@@ -105,13 +126,19 @@ export async function registrarMovimientoStockAction(formData: {
       });
 
     if (error) {
-      return { ok: false, error: error.message };
+      throw error;
     }
 
     revalidatePath("/");
     revalidatePath("/admin");
     return { ok: true, data: undefined };
   } catch (error: any) {
+    await registrarErrorAction(
+      "NX-DB-001",
+      error.message || "Error al registrar movimiento",
+      error.stack,
+      { formData }
+    );
     return { ok: false, error: error.message || "Error al procesar" };
   }
 }

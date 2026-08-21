@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { crearClienteSupabaseServidor, crearClienteSupabaseAdmin } from "@/lib/supabase/server";
 import { obtenerTodasOpcionesOnboarding } from "@/repositories/onboardingRepository";
-import { obtenerMetricasPruebaSocial, obtenerMapaDeDolores, obtenerPowerUsers, obtenerTrazabilidadUsuarios, obtenerHistorialMovimientosTrazabilidad } from "@/repositories/metricasRepository";
+import { obtenerMetricasPruebaSocial, obtenerMapaDeDolores, obtenerPowerUsers, obtenerTrazabilidadUsuarios, obtenerHistorialMovimientosTrazabilidad, obtenerErrorLogs } from "@/repositories/metricasRepository";
 import Navbar from "@/components/layout/Navbar";
 import AdminPanelClient from "./AdminPanelClient";
 
@@ -35,7 +35,7 @@ export default async function AdminPage() {
   const supabaseAdmin = usesPlaceholder ? null : crearClienteSupabaseAdmin();
 
   // Cargar estadísticas, trazabilidad y perfil de admin (WhatsApp)
-  const [opcionesRes, socialRes, doloresRes, powerUsersRes, adminPerfilRes, trazabilidadRes, historialRes] = await Promise.all([
+  const [opcionesRes, socialRes, doloresRes, powerUsersRes, adminPerfilRes, trazabilidadRes, historialRes, errorLogsRes] = await Promise.all([
     obtenerTodasOpcionesOnboarding(supabase),
     obtenerMetricasPruebaSocial(supabase),
     obtenerMapaDeDolores(supabase),
@@ -43,6 +43,7 @@ export default async function AdminPage() {
     supabase.from("perfiles_onboarding").select("whatsapp").eq("id", user.id).maybeSingle(),
     obtenerTrazabilidadUsuarios(supabase, supabaseAdmin),
     obtenerHistorialMovimientosTrazabilidad(supabase),
+    obtenerErrorLogs(supabase),
   ]);
 
   const opciones = opcionesRes.ok ? opcionesRes.data : [];
@@ -52,6 +53,7 @@ export default async function AdminPage() {
   const adminWhatsApp = adminPerfilRes.data ? adminPerfilRes.data.whatsapp : "";
   const trazabilidadUsuarios = trazabilidadRes.ok ? trazabilidadRes.data : [];
   const historialMovimientos = historialRes.ok ? historialRes.data : [];
+  const errorLogs = errorLogsRes.ok ? errorLogsRes.data : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -72,6 +74,7 @@ export default async function AdminPage() {
           adminWhatsApp={adminWhatsApp}
           trazabilidadUsuarios={trazabilidadUsuarios || []}
           historialMovimientos={historialMovimientos || []}
+          errorLogs={errorLogs || []}
         />
       </main>
     </div>

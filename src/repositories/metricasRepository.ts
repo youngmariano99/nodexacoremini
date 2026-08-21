@@ -291,3 +291,45 @@ export async function obtenerHistorialMovimientosTrazabilidad(
     return { ok: false, error: err.message || "Error al obtener historial de movimientos" };
   }
 }
+
+export interface ErrorLog {
+  id: string;
+  userId: string | null;
+  email: string | null;
+  codigoError: string;
+  mensaje: string;
+  stack: string | null;
+  contexto: any | null;
+  creadoEn: string;
+}
+
+export async function obtenerErrorLogs(
+  supabase: SupabaseClient
+): Promise<ResultadoRepositorio<ErrorLog[]>> {
+  try {
+    const { data, error } = await supabase
+      .from("error_logs")
+      .select("*")
+      .order("creado_en", { ascending: false })
+      .limit(100);
+
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+
+    const mapped = (data || []).map((d: any) => ({
+      id: d.id,
+      userId: d.user_id,
+      email: d.email,
+      codigoError: d.codigo_error,
+      mensaje: d.mensaje,
+      stack: d.stack,
+      contexto: d.contexto,
+      creadoEn: d.creado_en,
+    }));
+
+    return { ok: true, data: mapped };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error al obtener logs de errores" };
+  }
+}
