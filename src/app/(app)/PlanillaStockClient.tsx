@@ -1,21 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Edit2, Trash2, Check, X, Download, HelpCircle, Loader2, ArrowRight, ShieldCheck, Scale, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Plus, Edit2, Trash2, Download, HelpCircle, Loader2, ArrowRight, ShieldCheck, Scale } from "lucide-react";
 import { FilaProductoCalculado } from "@/repositories/productosRepository";
 import { Proveedor } from "@/repositories/proveedoresRepository";
 import { crearProductoAction, actualizarProductoAction, eliminarProductoAction, registrarMovimientoStockAction } from "./productosActions";
 import { crearProveedorAction } from "./proveedores/proveedoresActions";
 import Link from "next/link";
+import FriccionBanner from "./components/FriccionBanner";
+import ProductoModal from "./components/ProductoModal";
+import MovimientoModal from "./components/MovimientoModal";
 
 interface PlanillaStockClientProps {
   productosIniciales: FilaProductoCalculado[];
   proveedores: Proveedor[];
+  esAdmin: boolean;
 }
 
 export default function PlanillaStockClient({
   productosIniciales,
   proveedores: proveedoresIniciales,
+  esAdmin,
 }: PlanillaStockClientProps) {
   // Manejo de lista local de proveedores para permitir agregados rápidos sin refrescar
   const [listaProveedores, setListaProveedores] = useState<Proveedor[]>(proveedoresIniciales);
@@ -25,125 +30,98 @@ export default function PlanillaStockClient({
   const [filtroProveedor, setFiltroProveedor] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
 
-  // Estados de formulario de Producto
-  const [mostrarForm, setMostrarForm] = useState(false);
+  // Modales
+  const [mostrarProductoModal, setMostrarProductoModal] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [nombre, setNombre] = useState("");
-  const [stockActual, setStockActual] = useState<number>(0);
-  const [stockMinimo, setStockMinimo] = useState<number>(0);
-  const [consumoDiario, setConsumoDiario] = useState<number>(0);
-  const [proveedorId, setProveedorId] = useState("");
+  const [productoSeleccionado, setProductoSeleccionado] = useState<FilaProductoCalculado | null>(null);
 
-  // Creador rápido de proveedor
-  const [mostrandoFormProv, setMostrandoFormProv] = useState(false);
-  const [nuevoProvNombre, setNuevoProvNombre] = useState("");
-  const [nuevoProvDemora, setNuevoProvDemora] = useState<number>(3);
-  const [cargandoProv, setCargandoProv] = useState(false);
-
-  // Estados del modal de Movimiento de Stock
   const [productoMovimiento, setProductoMovimiento] = useState<FilaProductoCalculado | null>(null);
-  const [movTipo, setMovTipo] = useState<"entrada" | "salida">("entrada");
-  const [movCantidad, setMovCantidad] = useState<number>(1);
-  const [movProveedorId, setMovProveedorId] = useState("");
-  const [cargandoMov, setCargandoMov] = useState(false);
 
   // Estados globales de UI
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const resetForm = () => {
-    setNombre("");
-    setStockActual(0);
-    setStockMinimo(0);
-    setConsumoDiario(0);
-    setProveedorId("");
+  const handleNuevoProducto = () => {
     setEditandoId(null);
-    setMostrarForm(false);
-    setMostrandoFormProv(false);
-    setNuevoProvNombre("");
-    setNuevoProvDemora(3);
-    setError(null);
+    setProductoSeleccionado(null);
+    setMostrarProductoModal(true);
   };
 
   const handleEdit = (p: FilaProductoCalculado) => {
     setEditandoId(p.producto_id);
-    setNombre(p.producto_nombre);
-    setStockMinimo(p.stock_minimo);
-    setConsumoDiario(p.consumo_diario);
-    setProveedorId(p.proveedor_id);
-    setMostrarForm(true);
+    setProductoSeleccionado(p);
+    setMostrarProductoModal(true);
   };
 
-  const handleGuardar = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCargando(true);
-    setError(null);
-
-    const payload = {
-      nombre,
-      stock_actual: stockActual,
-      stock_minimo: stockMinimo,
-      consumo_diario: consumoDiario,
-      proveedor_id: proveedorId,
-    };
-
-    let resultado;
-    if (editandoId) {
-      resultado = await actualizarProductoAction(editandoId, {
-        nombre,
-        stock_minimo: stockMinimo,
-        consumo_diario: consumoDiario,
-        proveedor_id: proveedorId,
-      });
-    } else {
-      resultado = await crearProductoAction(payload);
-    }
-
-    if (resultado.ok) {
-      resetForm();
-    } else {
-      setError(resultado.error);
-    }
-    setCargando(false);
-  };
-
-  // Creación rápida de Proveedor dentro del formulario
-  const handleCrearProveedorRapido = async (contexto: "producto" | "movimiento" = "producto") => {
-    if (!nuevoProvNombre.trim()) return;
-    setCargandoProv(true);
+  const handleCrearProveedorRapido = async (nombre: string, demora: number): Promise<string | null> => {
     const res = await crearProveedorAction({
-      nombre: nuevoProvNombre,
-      dias_demora: nuevoProvDemora,
+      nombre,
+      dias_demora: demora,
     });
 
     if (res.ok) {
-      // Agregar el nuevo proveedor creado a la lista local
-      setListaProveedores(prev => [...prev, res.data]);
-      // Vincularlo automáticamente al selector correspondiente
-      if (contexto === "movimiento") {
-        setMovProveedorId(res.data.id);
-      } else {
-        setProveedorId(res.data.id);
-      }
-      // Resetear subformulario
-      setNuevoProvNombre("");
-      setNuevoProvDemora(3);
-      setMostrandoFormProv(false);
+      setListaProveedores((prev) => [...prev, res.data]);
+      return res.data.id;
     } else {
-      alert("Error al crear proveedor: " + (res.error || ""));
+      throw new Error(res.error || "Error al crear proveedor");
     }
-    setCargandoProv(false);
   };
 
-  const cerrarMovimientoModal = () => {
-    setProductoMovimiento(null);
-    setMovCantidad(1);
-    setMovProveedorId("");
-    setMostrandoFormProv(false);
-    setNuevoProvNombre("");
-    setNuevoProvDemora(3);
+  const handleGuardarProducto = async (data: {
+    id?: string;
+    nombre: string;
+    proveedorId: string;
+    stockActual: number;
+    stockMinimo: number;
+    consumoDiario: number;
+  }): Promise<boolean> => {
+    let resultado;
+    if (data.id) {
+      resultado = await actualizarProductoAction(data.id, {
+        nombre: data.nombre,
+        stock_minimo: data.stockMinimo,
+        consumo_diario: data.consumoDiario,
+        proveedor_id: data.proveedorId,
+      });
+    } else {
+      resultado = await crearProductoAction({
+        nombre: data.nombre,
+        stock_actual: data.stockActual,
+        stock_minimo: data.stockMinimo,
+        consumo_diario: data.consumoDiario,
+        proveedor_id: data.proveedorId,
+      });
+    }
+
+    if (resultado.ok) {
+      setMostrarProductoModal(false);
+      return true;
+    } else {
+      throw new Error(resultado.error || "Error al guardar el producto");
+    }
   };
 
+  const handleGuardarMovimiento = async (data: {
+    producto_id: string;
+    tipo: "entrada" | "salida";
+    shadow_quantity?: number;
+    cantidad: number;
+    proveedor_id: string;
+  }): Promise<boolean> => {
+    const res = await registrarMovimientoStockAction({
+      producto_id: data.producto_id,
+      tipo: data.tipo,
+      cantidad: data.cantidad,
+      proveedor_id: data.proveedor_id || null,
+    });
+
+    if (res.ok) {
+      setProductoMovimiento(null);
+      return true;
+    } else {
+      throw new Error(res.error || "Error al registrar movimiento");
+    }
+  };
 
   const handleEliminar = async (id: string) => {
     if (!confirm("¿Seguro de eliminar este producto?")) return;
@@ -153,27 +131,6 @@ export default function PlanillaStockClient({
       setError(resultado.error);
     }
     setCargando(false);
-  };
-
-  // Guardar un movimiento específico tipeado
-  const handleGuardarMovimiento = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!productoMovimiento) return;
-    setCargandoMov(true);
-
-    const res = await registrarMovimientoStockAction({
-      producto_id: productoMovimiento.producto_id,
-      tipo: movTipo,
-      cantidad: movCantidad,
-      proveedor_id: movProveedorId || null,
-    });
-
-    if (res.ok) {
-      cerrarMovimientoModal();
-    } else {
-      alert("Error al registrar movimiento: " + res.error);
-    }
-    setCargandoMov(false);
   };
 
   const exportarCSV = () => {
@@ -202,22 +159,24 @@ export default function PlanillaStockClient({
   return (
     <div className="space-y-6">
       {/* Banner de Acceso Admin si el correo cumple la regla */}
-      <div className="bg-brand/10 border border-brand/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex gap-3 items-center">
-          <ShieldCheck className="w-5 h-5 text-brand shrink-0" />
-          <div className="space-y-0.5">
-            <span className="text-sm font-bold text-foreground">Modo Super Administrador Activo</span>
-            <span className="block text-xs text-foreground/50">Tenes acceso al panel de métricas de tracción PLG y simulaciones.</span>
+      {esAdmin && (
+        <div className="bg-brand/10 border border-brand/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex gap-3 items-center">
+            <ShieldCheck className="w-5 h-5 text-brand shrink-0" />
+            <div className="space-y-0.5">
+              <span className="text-sm font-bold text-foreground">Modo Super Administrador Activo</span>
+              <span className="block text-xs text-foreground/50">Tenes acceso al panel de métricas de tracción PLG y simulaciones.</span>
+            </div>
           </div>
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand text-background hover:bg-brand/90 font-bold rounded-lg text-xs tracking-wide transition-all shrink-0 min-touch-target"
+          >
+            <span>Ir al Panel Admin</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
-        <Link
-          href="/admin"
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand text-background hover:bg-brand/90 font-bold rounded-lg text-xs tracking-wide transition-all shrink-0"
-        >
-          <span>Ir al Panel Admin</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
+      )}
 
       {/* Explicación del PdP */}
       <div className="bg-surface border border-border rounded-xl p-4 flex gap-4 text-sm text-foreground/80">
@@ -233,15 +192,7 @@ export default function PlanillaStockClient({
       </div>
 
       {/* Banner de Fricción / Upsell Educativo */}
-      <div className="bg-brand/5 border border-brand/20 rounded-xl p-4 flex gap-4 text-sm text-foreground/80">
-        <HelpCircle className="w-5 h-5 text-brand shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <h4 className="font-semibold text-foreground">💡 Tip de Eficiencia Operativa</h4>
-          <p className="text-xs leading-relaxed text-foreground/60">
-            ¿Cansado de descontar a mano cada unidad? En <strong>Nodexa Core</strong>, el stock se descuenta solo <strong>al registrar una venta</strong>. El mini sistema no genera reportes de &quot;productos más vendidos del mes&quot;, pero la versión completa automatiza todo tu historial de ventas y compras.
-          </p>
-        </div>
-      </div>
+      <FriccionBanner />
 
       {/* Cabecera y Filtros */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -251,330 +202,49 @@ export default function PlanillaStockClient({
             placeholder="Buscar producto..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            className="bg-surface border border-border text-sm py-2 px-3 rounded-lg w-full sm:w-64"
+            className="bg-surface text-sm border border-border py-2 px-3 rounded-lg text-foreground focus:border-brand outline-none w-full sm:w-48 font-medium"
           />
 
-          <div className="flex gap-2 w-full sm:w-auto">
-            <select
-              value={filtroProveedor}
-              onChange={(e) => setFiltroProveedor(e.target.value)}
-              className="bg-surface border border-border text-sm py-2 px-3 rounded-lg"
-            >
-              <option value="">Todos los Proveedores</option>
-              {listaProveedores.map(p => (
-                <option key={p.id} value={p.id}>{p.nombre}</option>
-              ))}
-            </select>
+          <select
+            value={filtroProveedor}
+            onChange={(e) => setFiltroProveedor(e.target.value)}
+            className="bg-surface text-sm border border-border py-2 px-3 rounded-lg text-foreground focus:border-brand outline-none"
+          >
+            <option value="">Todos los Proveedores</option>
+            {listaProveedores.map(p => (
+              <option key={p.id} value={p.id}>{p.nombre}</option>
+            ))}
+          </select>
 
-            <select
-              value={filtroEstado}
-              onChange={(e) => setFiltroEstado(e.target.value)}
-              className="bg-surface border border-border text-sm py-2 px-3 rounded-lg"
-            >
-              <option value="">Todos los Estados</option>
-              <option value="normal">Normal (Verde)</option>
-              <option value="alerta">Alerta de Pedido (Amarillo)</option>
-              <option value="critico">Crítico (Rojo)</option>
-            </select>
-          </div>
+          <select
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+            className="bg-surface text-sm border border-border py-2 px-3 rounded-lg text-foreground focus:border-brand outline-none"
+          >
+            <option value="">Todos los Estados</option>
+            <option value="normal">Normal</option>
+            <option value="alerta">Reabastecer</option>
+            <option value="critico">Crítico</option>
+          </select>
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto shrink-0 justify-end">
           <button
             onClick={exportarCSV}
-            className="flex items-center gap-2 px-4 py-2 bg-surface hover:bg-surface-hover border border-border rounded-lg text-sm transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-surface hover:bg-surface-hover border border-border rounded-lg text-sm transition-all min-touch-target"
           >
             <Download className="w-4 h-4" />
             <span>Exportar CSV</span>
           </button>
           <button
-            onClick={() => setMostrarForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-brand text-background hover:bg-brand/90 font-semibold rounded-lg text-sm transition-all shadow-lg shadow-brand/10"
+            onClick={handleNuevoProducto}
+            className="flex items-center gap-2 px-4 py-2 bg-brand text-background hover:bg-brand/90 font-semibold rounded-lg text-sm transition-all shadow-lg shadow-brand/10 min-touch-target"
           >
             <Plus className="w-4 h-4" />
             <span>Nuevo Producto</span>
           </button>
         </div>
       </div>
-
-      {/* Modal Formulario Producto */}
-      {mostrarForm && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-surface border border-border rounded-xl p-6 w-full max-w-md space-y-5 shadow-2xl relative">
-            <button
-              onClick={resetForm}
-              className="absolute top-4 right-4 text-foreground/50 hover:text-foreground inline-flex"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <h3 className="text-lg font-semibold text-foreground">
-              {editandoId ? "Editar Producto" : "Nuevo Producto"}
-            </h3>
-
-            {error && (
-              <div className="p-3 bg-critical/10 border border-critical/20 rounded-lg text-critical text-sm">
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleGuardar} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-foreground/50 uppercase">Nombre del Producto</label>
-                <input
-                  type="text"
-                  required
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  placeholder="Ej: Harina Integran 1kg"
-                  className="mt-1.5 w-full bg-background text-sm"
-                />
-              </div>
-
-              {/* Selector de Proveedor + Creador rápido */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="block text-xs font-semibold text-foreground/50 uppercase">Proveedor</label>
-                  <button
-                    type="button"
-                    onClick={() => setMostrandoFormProv(!mostrandoFormProv)}
-                    className="text-xs text-brand hover:underline font-semibold"
-                  >
-                    {mostrandoFormProv ? "- Cancelar" : "+ Crear Proveedor Rápido"}
-                  </button>
-                </div>
-
-                {mostrandoFormProv ? (
-                  <div className="p-3 bg-background border border-border rounded-lg space-y-3">
-                    <span className="block text-xs font-bold text-foreground/70">Dar de alta proveedor:</span>
-                    <input
-                      type="text"
-                      placeholder="Nombre del Proveedor"
-                      value={nuevoProvNombre}
-                      onChange={(e) => setNuevoProvNombre(e.target.value)}
-                      className="w-full text-xs py-1.5 px-2.5 bg-surface border border-border rounded"
-                    />
-                    <div className="flex items-center gap-2">
-                      <label className="text-[10px] text-foreground/50 uppercase shrink-0">Demora (días):</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={nuevoProvDemora}
-                        onChange={(e) => setNuevoProvDemora(Number(e.target.value))}
-                        className="w-16 text-xs py-1 px-2 bg-surface border border-border rounded numbers-mono"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleCrearProveedorRapido("producto")}
-                        disabled={cargandoProv || !nuevoProvNombre.trim()}
-                        className="ml-auto py-1 px-3 bg-brand text-background text-xs font-bold rounded flex items-center gap-1 disabled:opacity-50"
-                      >
-                        {cargandoProv ? <Loader2 className="w-3 h-3 animate-spin" /> : "Crear"}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <select
-                    required
-                    value={proveedorId}
-                    onChange={(e) => setProveedorId(e.target.value)}
-                    className="mt-1 w-full bg-background text-sm"
-                  >
-                    <option value="">Seleccionar Proveedor...</option>
-                    {listaProveedores.map(p => (
-                      <option key={p.id} value={p.id}>{p.nombre} ({p.dias_demora} días demora)</option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              {!editandoId && (
-                <div>
-                  <label className="block text-xs font-semibold text-foreground/50 uppercase">Stock Inicial</label>
-                  <input
-                    type="number"
-                    required
-                    min={0}
-                    value={stockActual}
-                    onChange={(e) => setStockActual(Number(e.target.value))}
-                    className="mt-1.5 w-full bg-background text-sm font-mono"
-                  />
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground/50 uppercase">Stock Mínimo</label>
-                  <input
-                    type="number"
-                    required
-                    min={0}
-                    value={stockMinimo}
-                    onChange={(e) => setStockMinimo(Number(e.target.value))}
-                    className="mt-1.5 w-full bg-background text-sm font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-foreground/50 uppercase">Consumo Diario</label>
-                  <input
-                    type="number"
-                    required
-                    min={0}
-                    value={consumoDiario}
-                    onChange={(e) => setConsumoDiario(Number(e.target.value))}
-                    className="mt-1.5 w-full bg-background text-sm font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="flex-1 py-2 px-4 border border-border rounded-lg text-sm text-foreground/80 hover:bg-surface-hover hover:text-foreground transition-all"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={cargando}
-                  className="flex-1 flex justify-center items-center gap-2 py-2 px-4 border border-transparent rounded-lg text-sm font-semibold text-background bg-brand hover:bg-brand/90 transition-all disabled:opacity-50"
-                >
-                  {cargando ? <Loader2 className="w-4 h-4 animate-spin" /> : "Guardar"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal para Registrar Movimiento de Stock con Cantidad e Input exacto */}
-      {productoMovimiento && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-surface border border-border rounded-xl p-6 w-full max-w-md space-y-4 shadow-2xl relative">
-            <button
-              onClick={cerrarMovimientoModal}
-              className="absolute top-4 right-4 text-foreground/50 hover:text-foreground inline-flex"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <h3 className="text-lg font-bold text-foreground">
-              Registrar Movimiento de Stock
-            </h3>
-            <p className="text-xs text-foreground/50">
-              Registrá una entrada o salida exacta sobre el producto: <strong className="text-foreground">{productoMovimiento.producto_nombre}</strong>.
-            </p>
-
-            <form onSubmit={handleGuardarMovimiento} className="space-y-4 pt-2">
-              <div className="grid grid-cols-2 gap-3">
-                {/* Tipo de Movimiento */}
-                <div>
-                  <label className="block text-xs font-semibold text-foreground/50 uppercase">Tipo</label>
-                  <select
-                    value={movTipo}
-                    onChange={(e) => setMovTipo(e.target.value as "entrada" | "salida")}
-                    className="mt-1.5 w-full bg-background text-sm"
-                  >
-                    <option value="entrada">Entrada (+)</option>
-                    <option value="salida">Salida (-)</option>
-                  </select>
-                </div>
-                {/* Cantidad Exacta */}
-                <div>
-                  <label className="block text-xs font-semibold text-foreground/50 uppercase">Cantidad</label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    value={movCantidad}
-                    onChange={(e) => setMovCantidad(Number(e.target.value))}
-                    className="mt-1.5 w-full bg-background text-sm font-mono numbers-mono"
-                  />
-                </div>
-              </div>
-
-              {/* Proveedor de Origen con creación rápida */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="block text-xs font-semibold text-foreground/50 uppercase">Proveedor de Origen / Destino</label>
-                  <button
-                    type="button"
-                    onClick={() => setMostrandoFormProv(!mostrandoFormProv)}
-                    className="text-xs text-brand hover:underline font-semibold"
-                  >
-                    {mostrandoFormProv ? "- Cancelar" : "+ Crear Proveedor Rápido"}
-                  </button>
-                </div>
-
-                {mostrandoFormProv ? (
-                  <div className="p-3 bg-background border border-border rounded-lg space-y-3">
-                    <span className="block text-xs font-bold text-foreground/70">Dar de alta proveedor:</span>
-                    <input
-                      type="text"
-                      placeholder="Nombre del Proveedor"
-                      value={nuevoProvNombre}
-                      onChange={(e) => setNuevoProvNombre(e.target.value)}
-                      className="w-full text-xs py-1.5 px-2.5 bg-surface border border-border rounded"
-                    />
-                    <div className="flex items-center gap-2">
-                      <label className="text-[10px] text-foreground/50 uppercase shrink-0">Demora (días):</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={nuevoProvDemora}
-                        onChange={(e) => setNuevoProvDemora(Number(e.target.value))}
-                        className="w-16 text-xs py-1 px-2 bg-surface border border-border rounded numbers-mono"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleCrearProveedorRapido("movimiento")}
-                        disabled={cargandoProv || !nuevoProvNombre.trim()}
-                        className="ml-auto py-1 px-3 bg-brand text-background text-xs font-bold rounded flex items-center gap-1 disabled:opacity-50"
-                      >
-                        {cargandoProv ? <Loader2 className="w-3 h-3 animate-spin" /> : "Crear"}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <select
-                    value={movProveedorId}
-                    onChange={(e) => setMovProveedorId(e.target.value)}
-                    className="mt-1.5 w-full bg-background text-sm"
-                  >
-                    <option value="">Proveedor por Defecto ({productoMovimiento.proveedor_nombre})</option>
-                    {listaProveedores.map(p => (
-                      <option key={p.id} value={p.id}>{p.nombre}</option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              <div className="flex gap-3 pt-3">
-                <button
-                  type="button"
-                  onClick={cerrarMovimientoModal}
-                  className="flex-1 py-2 px-4 border border-border rounded-lg text-sm text-foreground/85 hover:bg-surface-hover transition-all"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={cargandoMov}
-                  className="flex-1 flex justify-center items-center gap-2 py-2 px-4 border border-transparent rounded-lg text-sm font-semibold text-background bg-brand hover:bg-brand/90 transition-all disabled:opacity-50"
-                >
-                  {cargandoMov ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4" />
-                      <span>Guardar</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Planilla / Tabla Principal */}
       <div className="bg-surface border border-border rounded-xl overflow-hidden shadow-xl">
@@ -636,7 +306,7 @@ export default function PlanillaStockClient({
                               setCargando(false);
                             }}
                             disabled={p.stock_actual <= 0 || cargando}
-                            className="w-6 h-6 flex items-center justify-center text-xs font-bold border border-border hover:border-critical hover:text-critical bg-background/50 hover:bg-background rounded transition-all select-none disabled:opacity-30"
+                            className="w-6 h-6 flex items-center justify-center text-xs font-bold border border-border hover:border-critical hover:text-critical bg-background/50 hover:bg-background rounded transition-all select-none disabled:opacity-30 min-touch-target"
                             title="Descontar 1 unidad (Salida manual)"
                           >
                             -
@@ -657,7 +327,7 @@ export default function PlanillaStockClient({
                               setCargando(false);
                             }}
                             disabled={cargando}
-                            className="w-6 h-6 flex items-center justify-center text-xs font-bold border border-border hover:border-brand hover:text-brand bg-background/50 hover:bg-background rounded transition-all select-none"
+                            className="w-6 h-6 flex items-center justify-center text-xs font-bold border border-border hover:border-brand hover:text-brand bg-background/50 hover:bg-background rounded transition-all select-none min-touch-target"
                             title="Sumar 1 unidad (Entrada manual)"
                           >
                             +
@@ -666,11 +336,8 @@ export default function PlanillaStockClient({
                         <button
                           onClick={() => {
                             setProductoMovimiento(p);
-                            setMovCantidad(1);
-                            // Preseleccionar proveedor por defecto
-                            setMovProveedorId(p.proveedor_id);
                           }}
-                          className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold border border-border hover:border-brand hover:text-brand bg-background/50 hover:bg-background rounded transition-all select-none text-foreground/60 mt-1"
+                          className="flex items-center gap-1 px-2 py-0.5 text-xs font-bold border border-border hover:border-brand hover:text-brand bg-background/50 hover:bg-background rounded transition-all select-none text-foreground/60 mt-1 min-touch-target"
                         >
                           <Scale className="w-2.5 h-2.5 text-brand" />
                           <span>Exacto</span>
@@ -686,7 +353,7 @@ export default function PlanillaStockClient({
                             <span className="w-1.5 h-1.5 rounded-full bg-critical animate-pulse" />
                             CRÍTICO
                           </div>
-                          <span className="text-[10px] text-critical/80 font-semibold uppercase tracking-wider block">
+                          <span className="text-xs text-critical/80 font-semibold uppercase tracking-wider block">
                             Stock crítico / Quiebre
                           </span>
                         </div>
@@ -697,7 +364,7 @@ export default function PlanillaStockClient({
                             <span className="w-1.5 h-1.5 rounded-full bg-alert animate-pulse" />
                             REABASTECER
                           </div>
-                          <span className="text-[10px] text-alert/90 font-medium">
+                          <span className="text-xs text-alert/90 font-medium">
                             Emitir orden. Tarda {p.dias_demora} días en llegar.
                           </span>
                         </div>
@@ -713,13 +380,13 @@ export default function PlanillaStockClient({
                     <td className="px-6 py-4 text-right space-x-1">
                       <button
                         onClick={() => handleEdit(p)}
-                        className="p-2 hover:bg-border rounded text-foreground/60 hover:text-brand transition-all inline-flex"
+                        className="p-2 hover:bg-border rounded text-foreground/60 hover:text-brand transition-all inline-flex min-touch-target"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleEliminar(p.producto_id)}
-                        className="p-2 hover:bg-border rounded text-foreground/60 hover:text-critical transition-all inline-flex"
+                        className="p-2 hover:bg-border rounded text-foreground/60 hover:text-critical transition-all inline-flex min-touch-target"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -731,6 +398,33 @@ export default function PlanillaStockClient({
           </table>
         </div>
       </div>
+
+      {/* Modal Alta/Editar Producto */}
+      {mostrarProductoModal && (
+        <ProductoModal
+          key={editandoId ? `edit-${editandoId}` : "new-product"}
+          isOpen={mostrarProductoModal}
+          onClose={() => setMostrarProductoModal(false)}
+          editandoId={editandoId}
+          productoInitial={productoSeleccionado}
+          listaProveedores={listaProveedores}
+          onCrearProveedorRapido={handleCrearProveedorRapido}
+          onGuardar={handleGuardarProducto}
+        />
+      )}
+
+      {/* Modal Registrar Movimiento */}
+      {productoMovimiento && (
+        <MovimientoModal
+          key={`mov-${productoMovimiento.producto_id}`}
+          isOpen={productoMovimiento !== null}
+          onClose={() => setProductoMovimiento(null)}
+          productoMovimiento={productoMovimiento}
+          listaProveedores={listaProveedores}
+          onCrearProveedorRapido={handleCrearProveedorRapido}
+          onGuardarMovimiento={handleGuardarMovimiento}
+        />
+      )}
     </div>
   );
 }

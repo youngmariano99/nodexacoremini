@@ -55,7 +55,7 @@ export default async function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userEmail={user.email} />
+      <Navbar userEmail={user.email} esAdmin={true} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Panel de Control del Super Administrador</h1>

@@ -7,9 +7,10 @@ import { crearClienteSupabaseNavegador } from "@/lib/supabase/client";
 
 interface NavbarProps {
   userEmail?: string;
+  esAdmin?: boolean;
 }
 
-export default function Navbar({ userEmail }: NavbarProps) {
+export default function Navbar({ userEmail, esAdmin: esAdminProp }: NavbarProps) {
   const pathname = usePathname();
   const supabase = crearClienteSupabaseNavegador();
 
@@ -23,9 +24,13 @@ export default function Navbar({ userEmail }: NavbarProps) {
     { href: "/proveedores", label: "Proveedores", icon: Users },
   ];
 
-  const esAdmin = userEmail 
-    ? (userEmail.toLowerCase().includes("mari_") || userEmail.toLowerCase().includes("admin"))
-    : false;
+  const esAdmin = esAdminProp !== undefined 
+    ? esAdminProp 
+    : (userEmail 
+        ? (userEmail.toLowerCase().includes("mari_") || 
+           userEmail.toLowerCase().includes("admin") || 
+           userEmail.toLowerCase() === "marianoyoung.dev@gmail.com")
+        : false);
 
   if (esAdmin) {
     navItems.push({ href: "/admin", label: "Panel Admin", icon: BarChart3 });

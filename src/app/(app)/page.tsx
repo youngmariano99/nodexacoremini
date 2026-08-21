@@ -40,11 +40,13 @@ export default async function DashboardPage() {
     adminEmails.includes(p.email.toLowerCase()) || p.email.toLowerCase().includes("mari_")
   );
   const adminWhatsApp = adminProfile ? adminProfile.whatsapp : "";
+  const userEmail = user.email || "";
+  const esAdmin = userEmail ? (adminEmails.includes(userEmail.toLowerCase()) || userEmail.toLowerCase().includes("mari_")) : false;
 
   return (
     <div className="min-h-screen bg-background">
       {/* Barra de Navegación */}
-      <Navbar userEmail={user.email} />
+      <Navbar userEmail={userEmail} esAdmin={esAdmin} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Cabecera Principal */}
@@ -63,6 +65,7 @@ export default async function DashboardPage() {
         <PlanillaStockClient 
           productosIniciales={productos} 
           proveedores={proveedores} 
+          esAdmin={esAdmin}
         />
 
         {/* Banner CTA para conversión de Marketing */}
