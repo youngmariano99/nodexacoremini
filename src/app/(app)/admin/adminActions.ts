@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { crearClienteSupabaseServidor, crearClienteSupabaseAdmin } from "@/lib/supabase/server";
+import { obtenerTrazabilidadUsuarios, obtenerHistorialMovimientosTrazabilidad } from "@/repositories/metricasRepository";
+
 
 // Lista de administradores permitidos (se puede expandir vía .env)
 function esAdministrador(email?: string): boolean {
@@ -278,6 +280,30 @@ export async function actualizarWhatsAppAdminAction(whatsapp: string) {
     revalidatePath("/admin");
     revalidatePath("/");
     return { ok: true, data: "WhatsApp de soporte actualizado correctamente" };
+  } catch (error: any) {
+    return { ok: false, error: error.message };
+  }
+}
+
+export async function obtenerTrazabilidadUsuariosAction() {
+  try {
+    const { supabase } = await verificarAdmin();
+    
+    // Inicializar cliente admin de fallback si corresponde
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+    const usesPlaceholder = serviceRoleKey === "tu-service-role-key-aqui" || !serviceRoleKey;
+    const supabaseAdmin = usesPlaceholder ? null : crearClienteSupabaseAdmin();
+
+    return await obtenerTrazabilidadUsuarios(supabase, supabaseAdmin);
+  } catch (error: any) {
+    return { ok: false, error: error.message };
+  }
+}
+
+export async function obtenerHistorialMovimientosAction() {
+  try {
+    const { supabase } = await verificarAdmin();
+    return await obtenerHistorialMovimientosTrazabilidad(supabase);
   } catch (error: any) {
     return { ok: false, error: error.message };
   }

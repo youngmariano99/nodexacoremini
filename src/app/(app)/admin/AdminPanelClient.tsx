@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Play, RotateCcw, ShieldCheck, Plus, Check, EyeOff, Eye, Loader2, MessageSquarePlus, Phone, User, Store, AlertTriangle, Edit2, X, Save } from "lucide-react";
+import { Play, RotateCcw, ShieldCheck, Plus, Check, EyeOff, Eye, Loader2, MessageSquarePlus, Phone, User, Store, AlertTriangle, Edit2, X, Save, TrendingUp, Activity } from "lucide-react";
 import { OpcionOnboarding } from "@/repositories/onboardingRepository";
-import { MetricasPruebaSocial, MetricaDolor, PowerUser } from "@/repositories/metricasRepository";
+import { MetricasPruebaSocial, MetricaDolor, PowerUser, UsuarioTrazabilidad, MovimientoTrazabilidad } from "@/repositories/metricasRepository";
 import {
   sembrarDatosSimulacionAction,
   resetearDatosAction,
@@ -20,6 +20,8 @@ interface AdminPanelClientProps {
   mapaDolores: MetricaDolor[];
   powerUsers: PowerUser[];
   adminWhatsApp: string;
+  trazabilidadUsuarios: UsuarioTrazabilidad[];
+  historialMovimientos: MovimientoTrazabilidad[];
 }
 
 export default function AdminPanelClient({
@@ -28,6 +30,8 @@ export default function AdminPanelClient({
   mapaDolores,
   powerUsers,
   adminWhatsApp,
+  trazabilidadUsuarios,
+  historialMovimientos,
 }: AdminPanelClientProps) {
   const [nuevaOpcion, setNuevaOpcion] = useState("");
   const [cargandoAccion, setCargandoAccion] = useState<string | null>(null);
@@ -40,6 +44,24 @@ export default function AdminPanelClient({
   // Estado para WhatsApp
   const [supportWhatsApp, setSupportWhatsApp] = useState(adminWhatsApp);
   const [guardandoWhatsApp, setGuardandoWhatsApp] = useState(false);
+
+  // Estados de Trazabilidad
+  const [pestanaActiva, setPestanaActiva] = useState<"dashboard" | "trazabilidad">("dashboard");
+  const [filtroUsuario, setFiltroUsuario] = useState<string>("todos");
+  const [buscarUsuario, setBuscarUsuario] = useState<string>("");
+
+  // Filtrado de usuarios
+  const usuariosFiltrados = trazabilidadUsuarios.filter((u) => {
+    const keyword = buscarUsuario.toLowerCase().trim();
+    if (!keyword) return true;
+    return u.nombre.toLowerCase().includes(keyword) || u.email.toLowerCase().includes(keyword);
+  });
+
+  // Filtrado de movimientos
+  const movimientosFiltrados = historialMovimientos.filter((m) => {
+    if (filtroUsuario === "todos") return true;
+    return m.userId === filtroUsuario;
+  });
 
   const handleSimulacion = async (key: string, fn: () => Promise<any>) => {
     setCargandoAccion(key);
@@ -104,6 +126,32 @@ export default function AdminPanelClient({
 
   return (
     <div className="space-y-8">
+      {/* Sistema de Solapas (Tabs) */}
+      <div className="flex border-b border-border">
+        <button
+          onClick={() => setPestanaActiva("dashboard")}
+          className={`py-3 px-6 font-semibold text-sm border-b-2 transition-all flex items-center gap-2 ${
+            pestanaActiva === "dashboard"
+              ? "border-brand text-brand"
+              : "border-transparent text-foreground/50 hover:text-foreground"
+          }`}
+        >
+          <TrendingUp className="w-4 h-4" />
+          <span>Dashboard y Configuración</span>
+        </button>
+        <button
+          onClick={() => setPestanaActiva("trazabilidad")}
+          className={`py-3 px-6 font-semibold text-sm border-b-2 transition-all flex items-center gap-2 ${
+            pestanaActiva === "trazabilidad"
+              ? "border-brand text-brand"
+              : "border-transparent text-foreground/50 hover:text-foreground"
+          }`}
+        >
+          <Activity className="w-4 h-4" />
+          <span>Trazabilidad de Usuarios</span>
+        </button>
+      </div>
+
       {/* Mensaje de Estado / Feedback */}
       {resultadoMsg && (
         <div className={`p-4 rounded-xl border text-sm ${resultadoMsg.error
@@ -113,6 +161,9 @@ export default function AdminPanelClient({
           {resultadoMsg.texto}
         </div>
       )}
+
+      {pestanaActiva === "dashboard" && (
+        <>
 
       {/* 1. SECCIÓN DE OPERACIONES MOCK & SIMULACIONES */}
       <section className="bg-surface border border-border rounded-xl p-6 space-y-4">
@@ -456,6 +507,206 @@ export default function AdminPanelClient({
           </span>
         </form>
       </section>
+        </>
+      )}
+
+      {pestanaActiva === "trazabilidad" && (
+        <div className="space-y-8">
+          {/* SECCIÓN 1: MÉTRICAS Y LISTADO DE USUARIOS */}
+          <section className="bg-surface border border-border rounded-xl p-6 space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Métricas por Usuario (PLG)</h3>
+                <p className="text-xs text-foreground/50 mt-0.5">
+                  Conteo de productos creados, proveedores registrados, total de movimientos y última conexión.
+                </p>
+              </div>
+              <input
+                type="text"
+                placeholder="Buscar por nombre o email..."
+                value={buscarUsuario}
+                onChange={(e) => setBuscarUsuario(e.target.value)}
+                className="bg-background text-sm py-2 px-3 rounded-lg border border-border w-full md:w-64 font-medium text-foreground outline-none focus:border-brand"
+              />
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-border text-sm">
+                <thead>
+                  <tr className="text-left text-xs font-semibold text-foreground/50 uppercase tracking-wider bg-background/20">
+                    <th className="px-6 py-4">Usuario</th>
+                    <th className="px-6 py-4">Rubro / Registro</th>
+                    <th className="px-6 py-4 text-center">Productos</th>
+                    <th className="px-6 py-4 text-center">Proveedores</th>
+                    <th className="px-6 py-4 text-center">Movimientos</th>
+                    <th className="px-6 py-4 text-center">Última Conexión</th>
+                    <th className="px-6 py-4 text-right">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {usuariosFiltrados.length === 0 ? (
+                    <tr key="no-usuarios-trazabilidad">
+                      <td colSpan={7} className="py-8 text-center text-foreground/40">
+                        No se encontraron usuarios.
+                      </td>
+                    </tr>
+                  ) : (
+                    usuariosFiltrados.map((u) => {
+                      const ultimaCon = u.lastSignInAt
+                        ? new Date(u.lastSignInAt).toLocaleString("es-AR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "No disponible (Clave API faltante)";
+
+                      const fechaReg = new Date(u.creadoEn).toLocaleDateString("es-AR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      });
+
+                      return (
+                        <tr key={u.userId} className="hover:bg-surface-hover/20 transition-all text-sm">
+                          <td className="px-6 py-4">
+                            <div className="font-semibold text-foreground">{u.nombre}</div>
+                            <div className="text-xs text-foreground/50">{u.email}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-foreground/90 font-medium">{u.rubro}</div>
+                            <div className="text-xs text-foreground/40">Registrado: {fechaReg}</div>
+                          </td>
+                          <td className="px-6 py-4 text-center font-bold font-mono numbers-mono text-foreground/80">
+                            {u.productosCount}
+                          </td>
+                          <td className="px-6 py-4 text-center font-bold font-mono numbers-mono text-foreground/80">
+                            {u.proveedoresCount}
+                          </td>
+                          <td className="px-6 py-4 text-center font-bold font-mono numbers-mono text-brand">
+                            {u.movimientosCount}
+                          </td>
+                          <td className="px-6 py-4 text-center text-xs font-mono text-foreground/60">
+                            {ultimaCon}
+                          </td>
+                          <td className="px-6 py-4 text-right space-x-2">
+                            <button
+                              onClick={() => {
+                                setFiltroUsuario(u.userId);
+                                const section = document.getElementById("historial-general-trazabilidad");
+                                if (section) section.scrollIntoView({ behavior: "smooth" });
+                              }}
+                              className="px-3 py-1.5 bg-brand/10 border border-brand/20 hover:border-brand/40 text-brand text-xs font-semibold rounded-lg transition-all"
+                            >
+                              Ver Movimientos
+                            </button>
+                            <a
+                              href={`https://wa.me/${u.whatsapp.replace(/[^0-9]/g, "")}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand text-background hover:bg-brand/90 text-xs font-bold rounded-lg transition-all"
+                            >
+                              <Phone className="w-3 h-3" />
+                              <span>Contacto</span>
+                            </a>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* SECCIÓN 2: HISTORIAL GENERAL DE MOVIMIENTOS */}
+          <section id="historial-general-trazabilidad" className="bg-surface border border-border rounded-xl p-6 space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Auditoría / Historial de Movimientos</h3>
+                <p className="text-xs text-foreground/50 mt-0.5">
+                  Trazabilidad general de todas las entradas y salidas de stock del sistema.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-foreground/50 font-semibold uppercase tracking-wider shrink-0">Filtrar por:</span>
+                <select
+                  value={filtroUsuario}
+                  onChange={(e) => setFiltroUsuario(e.target.value)}
+                  className="bg-background text-sm py-2 px-3 rounded-lg border border-border font-medium text-foreground outline-none focus:border-brand"
+                >
+                  <option value="todos">Todos los usuarios</option>
+                  {trazabilidadUsuarios.map((u) => (
+                    <option key={u.userId} value={u.userId}>
+                      {u.nombre} ({u.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-border text-sm">
+                <thead>
+                  <tr className="text-left text-xs font-semibold text-foreground/50 uppercase tracking-wider bg-background/20">
+                    <th className="px-6 py-4">Fecha / Hora</th>
+                    <th className="px-6 py-4">Usuario</th>
+                    <th className="px-6 py-4">Producto</th>
+                    <th className="px-6 py-4 text-center">Tipo</th>
+                    <th className="px-6 py-4 text-right">Cantidad</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {movimientosFiltrados.length === 0 ? (
+                    <tr key="no-movimientos-trazabilidad">
+                      <td colSpan={5} className="py-8 text-center text-foreground/40">
+                        No hay movimientos registrados para este criterio.
+                      </td>
+                    </tr>
+                  ) : (
+                    movimientosFiltrados.map((m) => {
+                      const fechaMov = new Date(m.creadoEn).toLocaleString("es-AR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      });
+
+                      return (
+                        <tr key={m.id} className="hover:bg-surface-hover/20 transition-all text-sm">
+                          <td className="px-6 py-4 font-mono text-xs text-foreground/60">{fechaMov}</td>
+                          <td className="px-6 py-4">
+                            <div className="font-semibold text-foreground">{m.userNombre}</div>
+                            <div className="text-xs text-foreground/50">{m.userEmail}</div>
+                          </td>
+                          <td className="px-6 py-4 font-medium text-foreground">{m.productoNombre}</td>
+                          <td className="px-6 py-4 text-center">
+                            {m.tipo === "entrada" ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-brand/30 bg-brand/10 text-brand text-xs font-bold">
+                                Entrada
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-critical/30 bg-critical/10 text-critical text-xs font-bold">
+                                Salida
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-right font-bold font-mono numbers-mono text-foreground">
+                            {m.cantidad}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

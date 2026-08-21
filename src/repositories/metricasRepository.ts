@@ -147,3 +147,147 @@ async function obtenerPowerUsersFallback(supabase: SupabaseClient): Promise<Resu
 
   return { ok: true, data: users };
 }
+
+export interface UsuarioTrazabilidad {
+  userId: string;
+  nombre: string;
+  email: string;
+  whatsapp: string;
+  rubro: string;
+  creadoEn: string;
+  productosCount: number;
+  proveedoresCount: number;
+  movimientosCount: number;
+  lastSignInAt: string | null;
+}
+
+export interface MovimientoTrazabilidad {
+  id: string;
+  userId: string;
+  userNombre: string;
+  userEmail: string;
+  productoNombre: string;
+  tipo: "entrada" | "salida";
+  cantidad: number;
+  creadoEn: string;
+}
+
+export async function obtenerTrazabilidadUsuarios(
+  supabase: SupabaseClient,
+  supabaseAdmin: SupabaseClient | null
+): Promise<ResultadoRepositorio<UsuarioTrazabilidad[]>> {
+  try {
+    // 1. Obtener todos los perfiles de onboarding
+    const { data: perfiles, error: errPerfiles } = await supabase
+      .from("perfiles_onboarding")
+      .select("id, nombre, email, whatsapp, rubro, creado_en")
+      .order("creado_en", { ascending: false });
+
+    if (errPerfiles) {
+      return { ok: false, error: errPerfiles.message };
+    }
+
+    // 2. Obtener conteo de productos, proveedores y movimientos en paralelo
+    const [productosRes, proveedoresRes, movimientosRes] = await Promise.all([
+      supabase.from("productos").select("id, user_id"),
+      supabase.from("proveedores").select("id, user_id"),
+      supabase.from("movimientos_stock").select("id, user_id"),
+    ]);
+
+    const prodCounts: Record<string, number> = {};
+    const provCounts: Record<string, number> = {};
+    const movCounts: Record<string, number> = {};
+
+    productosRes.data?.forEach((p) => {
+      prodCounts[p.user_id] = (prodCounts[p.user_id] || 0) + 1;
+    });
+    proveedoresRes.data?.forEach((p) => {
+      provCounts[p.user_id] = (provCounts[p.user_id] || 0) + 1;
+    });
+    movimientosRes.data?.forEach((m) => {
+      movCounts[m.user_id] = (movCounts[m.user_id] || 0) + 1;
+    });
+
+    // 3. Consultar última conexión de auth.users si el cliente admin está disponible
+    const lastSignInMap: Record<string, string | null> = {};
+    if (supabaseAdmin) {
+      try {
+        const { data, error: errAdmin } = await supabaseAdmin.auth.admin.listUsers();
+        if (!errAdmin && data?.users) {
+          data.users.forEach((u) => {
+            lastSignInMap[u.id] = u.last_sign_in_at || null;
+          });
+        }
+      } catch (e) {
+        console.error("Error al obtener listUsers de admin: ", e);
+      }
+    }
+
+    const dataTrazabilidad: UsuarioTrazabilidad[] = (perfiles || []).map((p) => ({
+      userId: p.id,
+      nombre: p.nombre,
+      email: p.email,
+      whatsapp: p.whatsapp,
+      rubro: p.rubro,
+      creadoEn: p.creado_en,
+      productosCount: prodCounts[p.id] || 0,
+      proveedoresCount: provCounts[p.id] || 0,
+      movimientosCount: movCounts[p.id] || 0,
+      lastSignInAt: lastSignInMap[p.id] || null,
+    }));
+
+    return { ok: true, data: dataTrazabilidad };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error al obtener trazabilidad de usuarios" };
+  }
+}
+
+export async function obtenerHistorialMovimientosTrazabilidad(
+  supabase: SupabaseClient
+): Promise<ResultadoRepositorio<MovimientoTrazabilidad[]>> {
+  try {
+    // 1. Obtener movimientos ordenados por fecha descendente
+    const { data: movimientos, error: errMov } = await supabase
+      .from("movimientos_stock")
+      .select("id, user_id, producto_id, tipo, cantidad, creado_en")
+      .order("creado_en", { ascending: false });
+
+    if (errMov) {
+      return { ok: false, error: errMov.message };
+    }
+
+    // 2. Obtener productos y perfiles para cruzar en memoria
+    const [productosRes, perfilesRes] = await Promise.all([
+      supabase.from("productos").select("id, nombre"),
+      supabase.from("perfiles_onboarding").select("id, nombre, email"),
+    ]);
+
+    const prodMap: Record<string, string> = {};
+    productosRes.data?.forEach((p) => {
+      prodMap[p.id] = p.nombre;
+    });
+
+    const perfMap: Record<string, { nombre: string; email: string }> = {};
+    perfilesRes.data?.forEach((p) => {
+      perfMap[p.id] = { nombre: p.nombre, email: p.email };
+    });
+
+    const historial: MovimientoTrazabilidad[] = (movimientos || []).map((m) => {
+      const user = perfMap[m.user_id] || { nombre: "Usuario eliminado", email: "desconocido" };
+      return {
+        id: m.id,
+        userId: m.user_id,
+        userNombre: user.nombre,
+        userEmail: user.email,
+        productoNombre: prodMap[m.producto_id] || "Producto eliminado",
+        tipo: m.tipo as "entrada" | "salida",
+        cantidad: Number(m.cantidad),
+        creadoEn: m.creado_en,
+      };
+    });
+
+    return { ok: true, data: historial };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error al obtener historial de movimientos" };
+  }
+}
