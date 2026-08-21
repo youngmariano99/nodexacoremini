@@ -27,11 +27,13 @@ export interface DatosNuevoProducto {
 }
 
 export async function obtenerProductosCalculados(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  userId: string
 ): Promise<ResultadoRepositorio<FilaProductoCalculado[]>> {
   const { data: productos, error } = await supabase
     .from("vista_productos_puntos_pedido")
     .select("*")
+    .eq("user_id", userId)
     .order("producto_nombre", { ascending: true });
 
   if (error) {
