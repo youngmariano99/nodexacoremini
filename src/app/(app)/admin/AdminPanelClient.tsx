@@ -4,11 +4,11 @@ import { useState } from "react";
 import { Play, RotateCcw, ShieldCheck, Plus, Check, EyeOff, Eye, Loader2, MessageSquarePlus, Phone, User, Store, AlertTriangle, Edit2, X, Save } from "lucide-react";
 import { OpcionOnboarding } from "@/repositories/onboardingRepository";
 import { MetricasPruebaSocial, MetricaDolor, PowerUser } from "@/repositories/metricasRepository";
-import { 
-  sembrarDatosSimulacionAction, 
-  resetearDatosAction, 
-  simularQuiebreEvitadoAction, 
-  crearOpcionOnboardingAction, 
+import {
+  sembrarDatosSimulacionAction,
+  resetearDatosAction,
+  simularQuiebreEvitadoAction,
+  crearOpcionOnboardingAction,
   toggleOpcionOnboardingAction,
   actualizarOpcionOnboardingAction,
   actualizarWhatsAppAdminAction
@@ -106,11 +106,10 @@ export default function AdminPanelClient({
     <div className="space-y-8">
       {/* Mensaje de Estado / Feedback */}
       {resultadoMsg && (
-        <div className={`p-4 rounded-xl border text-sm ${
-          resultadoMsg.error 
-            ? "bg-critical/10 border-critical/20 text-critical" 
+        <div className={`p-4 rounded-xl border text-sm ${resultadoMsg.error
+            ? "bg-critical/10 border-critical/20 text-critical"
             : "bg-brand/10 border-brand/20 text-brand"
-        }`}>
+          }`}>
           {resultadoMsg.texto}
         </div>
       )}
@@ -181,7 +180,7 @@ export default function AdminPanelClient({
       {/* 2. TABLERO DE MÉTRICAS PLG (EXCLUSIVO ADMIN) */}
       <section className="space-y-6">
         <h3 className="text-lg font-bold text-foreground border-b border-border pb-2">Tablero de Trazabilidad PLG</h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-surface border border-border p-6 rounded-xl relative overflow-hidden">
             <span className="text-xs font-semibold text-foreground/50 uppercase tracking-wider block">Quiebres Evitados</span>
@@ -210,16 +209,16 @@ export default function AdminPanelClient({
             </h4>
             <div className="space-y-4">
               {mapaDolores.length === 0 ? (
-                <p className="text-xs text-foreground/40 text-center py-4">Sin datos de dolor.</p>
+                <p key="no-dolores" className="text-xs text-foreground/40 text-center py-4">Sin datos de dolor.</p>
               ) : (
                 mapaDolores.map((dolor, idx) => (
-                  <div key={idx} className="space-y-1.5">
+                  <div key={`dolor-${idx}-${dolor.problemaTexto}`} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs text-foreground">
                       <span className="truncate max-w-[200px]" title={dolor.problemaTexto}>{dolor.problemaTexto}</span>
                       <span className="numbers-mono font-bold">{dolor.cantidad}</span>
                     </div>
                     <div className="w-full h-1 bg-background rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="h-full bg-brand"
                         style={{ width: `${Math.min(100, (dolor.cantidad / Math.max(1, ...mapaDolores.map(d => d.cantidad))) * 100)}%` }}
                       />
@@ -249,12 +248,12 @@ export default function AdminPanelClient({
                 </thead>
                 <tbody className="divide-y divide-border">
                   {powerUsers.length === 0 ? (
-                    <tr>
+                    <tr key="no-power-users">
                       <td colSpan={5} className="py-4 text-center text-foreground/45">No hay movimientos.</td>
                     </tr>
                   ) : (
-                    powerUsers.map(u => (
-                      <tr key={u.userId}>
+                    powerUsers.map((u, idx) => (
+                      <tr key={u.userId || `user-${idx}`}>
                         <td className="py-2.5 font-medium">{u.nombre}</td>
                         <td className="py-2.5">{u.rubro}</td>
                         <td className="py-2.5 font-mono">{u.whatsapp}</td>
@@ -329,17 +328,17 @@ export default function AdminPanelClient({
               </thead>
               <tbody className="divide-y divide-border">
                 {opcionesOnboarding.length === 0 ? (
-                  <tr>
+                  <tr key="no-opc">
                     <td colSpan={2} className="py-4 text-center text-foreground/40">No hay opciones cargadas en catálogo.</td>
                   </tr>
                 ) : (
-                  opcionesOnboarding.map((opc) => {
+                  opcionesOnboarding.map((opc, idx) => {
                     const cargandoToggle = cargandoAccion === `toggle_${opc.id}`;
                     const cargandoEdit = cargandoAccion === `edit_${opc.id}`;
                     const esEditando = editandoOpcId === opc.id;
 
                     return (
-                      <tr key={opc.id} className="hover:bg-surface-hover/30 transition-all text-sm">
+                      <tr key={opc.id || `opc-${idx}`} className="hover:bg-surface-hover/30 transition-all text-sm">
                         <td className="py-3 text-foreground">
                           {esEditando ? (
                             <div className="flex items-center gap-2">
@@ -367,14 +366,14 @@ export default function AdminPanelClient({
                               </button>
                             </div>
                           ) : (
-                            <div className="flex items-center justify-between group pr-4">
+                            <div className="flex items-center justify-between pr-4 gap-2">
                               <span>{opc.texto}</span>
                               <button
                                 onClick={() => {
                                   setEditandoOpcId(opc.id);
                                   setEditandoOpcTexto(opc.texto);
                                 }}
-                                className="p-1 text-foreground/40 hover:text-brand rounded opacity-0 group-hover:opacity-100 transition-all"
+                                className="p-1 text-brand hover:bg-brand/10 rounded transition-all shrink-0"
                                 title="Editar texto"
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
@@ -386,11 +385,10 @@ export default function AdminPanelClient({
                           <button
                             onClick={() => handleToggleOpcion(opc.id, opc.activo)}
                             disabled={cargandoToggle}
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold border transition-all ${
-                              opc.activo 
-                                ? "bg-brand/10 border-brand/30 text-brand" 
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold border transition-all ${opc.activo
+                                ? "bg-brand/10 border-brand/30 text-brand"
                                 : "bg-border/30 border-border text-foreground/40"
-                            }`}
+                              }`}
                           >
                             {cargandoToggle ? (
                               <Loader2 className="w-3 h-3 animate-spin" />
@@ -425,7 +423,7 @@ export default function AdminPanelClient({
             Configuración de WhatsApp de Soporte / Venta
           </h3>
           <p className="text-xs text-foreground/50">
-            Definí el número de WhatsApp al cual redirigir a los usuarios del plan gratuito cuando hagan clic en el botón &quot;[Probar Nodexa Core Gratis]&quot;.
+            Definí el número de WhatsApp al cual redirigir a los usuarios del plan gratuito cuando hagan clic en el botón &quot;[Probar Nodexa Core]&quot;.
           </p>
         </div>
 

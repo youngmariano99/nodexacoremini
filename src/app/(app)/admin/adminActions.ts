@@ -20,8 +20,11 @@ async function verificarAdmin() {
     throw new Error("No autorizado: Acceso exclusivo para administradores");
   }
 
-  const adminClient = crearClienteSupabaseAdmin();
-  return { supabase: adminClient, user };
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  const usesPlaceholder = serviceRoleKey === "tu-service-role-key-aqui" || !serviceRoleKey;
+
+  const supabase = usesPlaceholder ? userClient : crearClienteSupabaseAdmin();
+  return { supabase, user };
 }
 
 // 1. SEMBRAR DATOS DE SIMULACIÓN (Listo para TikTok / Reels)
